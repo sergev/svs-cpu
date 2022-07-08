@@ -1,7 +1,7 @@
 *
 * Test for instructions XTA, UZA, UIA.
 *
-start   start   '1'
+start   start   '10'
         xta     =b'0'
         uza     ok
         uj      fail
@@ -17,5 +17,5 @@ ok      u1a     fail
 fail    стоп    '76543'(2)
 pass    стоп    '12345'(6)
 *-------------------------
-align   адрес   start+'1777'            , данные с адреса 2000
+align   адрес   start+'1770'            , данные с адреса 2000
         fin

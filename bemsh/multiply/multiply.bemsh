@@ -1,7 +1,7 @@
 *
 * Test for instructions А*Х, А/Х.
 *
-start   start   '1'
+start   start   '10'
         vtm     stack(15)
         ntr     3
         xta     cdu5l
@@ -40,7 +40,7 @@ start   start   '1'
 pass    стоп    '12345'(6)
 fail    стоп    '76543'(2)
 *-------------------------
-align   адрес   start+'1777'            , данные с адреса 2000
+align   адрес   start+'1770'            , данные с адреса 2000
 cdu5l   конд    b'6400000000000005'
 c5udl   конд    b'2400000000000015'
 cau     конд    b'5000000000000000'

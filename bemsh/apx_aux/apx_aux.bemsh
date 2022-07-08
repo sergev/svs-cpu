@@ -1,7 +1,7 @@
 *
 * Test for instructions APX, AUX.
 *
-start   start   '1'
+start   start   '10'
         xta     chess
         apx     cful
         aux     c0ful
@@ -22,7 +22,7 @@ start   start   '1'
 pass    стоп    '12345'(6)
 fail    стоп    '76543'(2)
 *-------------------------
-align   адрес   start+'1777'            , данные с адреса 2000
+align   адрес   start+'1770'            , данные с адреса 2000
 cful    конд    b'7777777777777777'
 c0ful   конд    b'3777777777777777'
 chess   конд    b'5252525252525252'

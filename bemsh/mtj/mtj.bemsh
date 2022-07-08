@@ -1,7 +1,7 @@
 *
 * Test for instructions MTJ, J+M, VTM, UTM.
 *
-start   start   '1'
+start   start   '10'
         utc     -13
         vtm     14(2)
         utm     -1(2)

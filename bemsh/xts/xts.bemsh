@@ -1,7 +1,7 @@
 *
 * Test for instruction XTS.
 *
-start   start   '1'
+start   start   '10'
         vtm     ws(15)
         ita     15
         aex     =b'77777'
@@ -30,6 +30,6 @@ start   start   '1'
 pass    стоп    '12345'(6)
 fail    стоп    '76543'(2)
 *-------------------------
-align   адрес   start+'1777'            , данные с адреса 2000
+align   адрес   start+'1770'            , данные с адреса 2000
 ws      пам     3
         fin

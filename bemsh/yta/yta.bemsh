@@ -15,7 +15,7 @@
 *   U1A saves accumulator in Y
 *   AEX saves accumulator in Y
 *
-start   start   '1'
+start   start   '10'
 *
 * Check that YTA in logical mode returns Y untouched.
 * Check that YTA does not modify Y.
@@ -153,7 +153,7 @@ next    yta
 pass    стоп    '12345'(6)
 fail    стоп    '76543'(2)
 *-------------------------
-align   адрес   start+'1777'            , данные с адреса 2000
+align   адрес   start+'1770'            , данные с адреса 2000
 c123    конд    b'1234567123456712'
 cful    конд    b'7777777777777777'
 ws      пам     1

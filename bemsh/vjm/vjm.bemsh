@@ -1,7 +1,7 @@
 *
 * Test for instruction VJM.
 *
-start   start   '1'
+start   start   '10'
         utc
         vjm     a(2)            , справа
 a       utm     -2(2)           , a = 2

@@ -1,7 +1,7 @@
 *
 * Test for instructions ATI, ITA.
 *
-start   start   '1'
+start   start   '10'
         xta
         vtm     -1(2)
         ati     2
@@ -18,5 +18,5 @@ start   start   '1'
 pass    стоп    '12345'(6)
 fail    стоп    '76543'(2)
 *-------------------------
-align   адрес   start+'1777'            , данные с адреса 2000
+align   адрес   start+'1770'            , данные с адреса 2000
         fin

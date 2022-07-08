@@ -1,7 +1,7 @@
 *
 * Test for instruction А/Х.
 *
-start   start   '1'
+start   start   '10'
         vtm     stack(15)
         ntr     3
         xta     =e'6.0'
@@ -12,6 +12,6 @@ start   start   '1'
 pass    стоп    '12345'(6)
 fail    стоп    '76543'(2)
 *-------------------------
-align   адрес   start+'1777'            , данные с адреса 2000
+align   адрес   start+'1770'            , данные с адреса 2000
 stack   пам     10                      , стек
         fin

@@ -1,7 +1,7 @@
 *
 * Test for instructions UTC, WTC.
 *
-start   start   '1'
+start   start   '10'
         utc     -1
         vtm     (3)
         vzm     fail(3)
@@ -50,7 +50,7 @@ e       vtm     (3)
 pass    стоп    '12345'(6)
 fail    стоп    '76543'(2)
 *-------------------------
-align   адрес   start+'1777'            , данные с адреса 2000
+align   адрес   start+'1770'            , данные с адреса 2000
 mmask   конд    b'77777'
 chess   конд    b'5252525252525252'
         конд    b'2525252525252525'

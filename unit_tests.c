@@ -165,9 +165,102 @@ static void jam_utm(void *context)
     ct_assertequal(ElSvsGetM(cpu, 3), 0u);
 }
 
+//
+// Test: VLM instruction (ЦИКЛ).
+//
 static void vlm(void *context)
 {
+    struct ElSvsProcessor *cpu = context;
+
+    // Store the test code.
+    ElSvsStoreInstruction(cpu, 0010, ElSvsAsm("уиа -11(2), уиа -12(3)"));
+    ElSvsStoreInstruction(cpu, 0011, ElSvsAsm("слиа 1(3), цикл 11(2)"));
+    ElSvsStoreInstruction(cpu, 0012, ElSvsAsm("пино 105(2), пино 105(3)"));
+    ElSvsStoreInstruction(cpu, 0013, ElSvsAsm("цикл 105(2), пино 105(2)"));
+    ElSvsStoreInstruction(cpu, 0014, ElSvsAsm("сч 2000, уиа 77401(16)"));
+    ElSvsStoreInstruction(cpu, 0015, ElSvsAsm("зп 2400(16), цикл 15(16)"));
+    ElSvsStoreInstruction(cpu, 0016, ElSvsAsm("сч, уиа 77401(17)"));
+    ElSvsStoreInstruction(cpu, 0017, ElSvsAsm("слц 2400(17), цикл 17(17)"));
+    ElSvsStoreInstruction(cpu, 0020, ElSvsAsm("нтж, по 105"));
+    ElSvsStoreInstruction(cpu, 0021, ElSvsAsm("нтж 2000, пе 105"));
+    ElSvsStoreInstruction(cpu, 0022, ElSvsAsm("уиа 77401(16), уиа 77401(15)"));
+    ElSvsStoreInstruction(cpu, 0023, ElSvsAsm("слц 2400(16), цикл 23(16)"));
+    ElSvsStoreInstruction(cpu, 0024, ElSvsAsm("нтж, по 105"));
+    ElSvsStoreInstruction(cpu, 0025, ElSvsAsm("нтж 2000, пе 105"));
+    ElSvsStoreInstruction(cpu, 0026, ElSvsAsm("слц 2400(15), цикл 26(15)"));
+    ElSvsStoreInstruction(cpu, 0027, ElSvsAsm("нтж, по 105"));
+    ElSvsStoreInstruction(cpu, 0030, ElSvsAsm("нтж 2000, пе 105"));
+    ElSvsStoreInstruction(cpu, 0031, ElSvsAsm("уиа 77401(14), уиа 77401(13)"));
+    ElSvsStoreInstruction(cpu, 0032, ElSvsAsm("слц 2400(14), цикл 32(14)"));
+    ElSvsStoreInstruction(cpu, 0033, ElSvsAsm("нтж, по 105"));
+    ElSvsStoreInstruction(cpu, 0034, ElSvsAsm("нтж 2000, пе 105"));
+    ElSvsStoreInstruction(cpu, 0035, ElSvsAsm("слц 2400(13), цикл 35(13)"));
+    ElSvsStoreInstruction(cpu, 0036, ElSvsAsm("нтж, по 105"));
+    ElSvsStoreInstruction(cpu, 0037, ElSvsAsm("нтж 2000, пе 105"));
+    ElSvsStoreInstruction(cpu, 0040, ElSvsAsm("уиа 77401(12), уиа 77401(11)"));
+    ElSvsStoreInstruction(cpu, 0041, ElSvsAsm("слц 2400(12), цикл 41(12)"));
+    ElSvsStoreInstruction(cpu, 0042, ElSvsAsm("нтж, по 105"));
+    ElSvsStoreInstruction(cpu, 0043, ElSvsAsm("нтж 2000, пе 105"));
+    ElSvsStoreInstruction(cpu, 0044, ElSvsAsm("слц 2400(11), цикл 44(11)"));
+    ElSvsStoreInstruction(cpu, 0045, ElSvsAsm("нтж, по 105"));
+    ElSvsStoreInstruction(cpu, 0046, ElSvsAsm("нтж 2000, пе 105"));
+    ElSvsStoreInstruction(cpu, 0047, ElSvsAsm("уиа 77401(10), уиа 77401(7)"));
+    ElSvsStoreInstruction(cpu, 0050, ElSvsAsm("слц 2400(10), цикл 50(10)"));
+    ElSvsStoreInstruction(cpu, 0051, ElSvsAsm("нтж, по 105"));
+    ElSvsStoreInstruction(cpu, 0052, ElSvsAsm("нтж 2000, пе 105"));
+    ElSvsStoreInstruction(cpu, 0053, ElSvsAsm("слц 2400(7), цикл 53(7)"));
+    ElSvsStoreInstruction(cpu, 0054, ElSvsAsm("нтж, по 105"));
+    ElSvsStoreInstruction(cpu, 0055, ElSvsAsm("нтж 2000, пе 105"));
+    ElSvsStoreInstruction(cpu, 0056, ElSvsAsm("уиа 77401(6), уиа 77401(5)"));
+    ElSvsStoreInstruction(cpu, 0057, ElSvsAsm("слц 2400(6), цикл 57(6)"));
+    ElSvsStoreInstruction(cpu, 0060, ElSvsAsm("нтж, по 105"));
+    ElSvsStoreInstruction(cpu, 0061, ElSvsAsm("нтж 2000, пе 105"));
+    ElSvsStoreInstruction(cpu, 0062, ElSvsAsm("слц 2400(5), цикл 62(5)"));
+    ElSvsStoreInstruction(cpu, 0063, ElSvsAsm("нтж, по 105"));
+    ElSvsStoreInstruction(cpu, 0064, ElSvsAsm("нтж 2000, пе 105"));
+    ElSvsStoreInstruction(cpu, 0065, ElSvsAsm("уиа 77401(4), уиа 77401(3)"));
+    ElSvsStoreInstruction(cpu, 0066, ElSvsAsm("слц 2400(4), цикл 66(4)"));
+    ElSvsStoreInstruction(cpu, 0067, ElSvsAsm("нтж, по 105"));
+    ElSvsStoreInstruction(cpu, 0070, ElSvsAsm("нтж 2000, пе 105"));
+    ElSvsStoreInstruction(cpu, 0071, ElSvsAsm("слц 2400(3), цикл 71(3)"));
+    ElSvsStoreInstruction(cpu, 0072, ElSvsAsm("нтж, по 105"));
+    ElSvsStoreInstruction(cpu, 0073, ElSvsAsm("нтж 2000, пе 105"));
+    ElSvsStoreInstruction(cpu, 0074, ElSvsAsm("уиа 77401(2), мода"));
+    ElSvsStoreInstruction(cpu, 0075, ElSvsAsm("слц 2400(2), цикл 75(2)"));
+    ElSvsStoreInstruction(cpu, 0076, ElSvsAsm("нтж, по 105"));
+    ElSvsStoreInstruction(cpu, 0077, ElSvsAsm("нтж 2000, пе 105"));
+    ElSvsStoreInstruction(cpu, 0100, ElSvsAsm("уиа 77401(1), мода"));
+    ElSvsStoreInstruction(cpu, 0101, ElSvsAsm("слц 2400(1), цикл 101(1)"));
+    ElSvsStoreInstruction(cpu, 0102, ElSvsAsm("нтж, по 105"));
+    ElSvsStoreInstruction(cpu, 0103, ElSvsAsm("нтж 2000, пе 105"));
+    ElSvsStoreInstruction(cpu, 0104, ElSvsAsm("стоп 12345(6), мода")); // Magic opcode: Pass
+    ElSvsStoreInstruction(cpu, 0105, ElSvsAsm("стоп 76543(2), мода")); // Magic opcode: Fail
+    ElSvsStoreData(cpu, 02000, 07777777777777777ul);
+
+    // Run the code.
+    ElSvsSetPC(cpu, 010);
+    int status = ElSvsSimulate(cpu);
+    ct_assertequal(status, ESS_HALT);
+
+    // Check registers.
+    ct_assertequal(ElSvsGetPC(cpu), 0104u);
+    ct_assertequal(ElSvsGetM(cpu, 1), 0u);
+    ct_assertequal(ElSvsGetM(cpu, 2), 0u);
+    ct_assertequal(ElSvsGetM(cpu, 3), 0u);
+    ct_assertequal(ElSvsGetM(cpu, 4), 0u);
+    ct_assertequal(ElSvsGetM(cpu, 5), 0u);
+    ct_assertequal(ElSvsGetM(cpu, 6), 0u);
+    ct_assertequal(ElSvsGetM(cpu, 7), 0u);
+    ct_assertequal(ElSvsGetM(cpu, 8), 0u);
+    ct_assertequal(ElSvsGetM(cpu, 9), 0u);
+    ct_assertequal(ElSvsGetM(cpu, 10), 0u);
+    ct_assertequal(ElSvsGetM(cpu, 11), 0u);
+    ct_assertequal(ElSvsGetM(cpu, 12), 0u);
+    ct_assertequal(ElSvsGetM(cpu, 13), 0u);
+    ct_assertequal(ElSvsGetM(cpu, 14), 0u);
+    ct_assertequal(ElSvsGetM(cpu, 15), 0u);
 }
+
 static void utc_wtc(void *context)
 {
 }

@@ -1,7 +1,7 @@
 *
 * Test for instruction AMX.
 *
-start   start   '1'
+start   start   '10'
         vtm     stack(15)
         ntr     3                       , без нормализации и округления
         vtm     64(14)
@@ -52,7 +52,7 @@ start   start   '1'
 pass    стоп    '12345'(6)
 fail    стоп    '76543'(2)
 *-------------------------
-align   адрес   start+'1777'            , данные с адреса 2000
+align   адрес   start+'1770'            , данные с адреса 2000
 minus1  конд    b'0037777777777777'     , целое -1 без порядка
 stack   пам     10                      , стек
         fin

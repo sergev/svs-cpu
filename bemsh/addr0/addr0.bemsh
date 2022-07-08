@@ -2,7 +2,7 @@
 * Test for instructions ATX 0(0), XTA 0(0), ATI 0(0), ITA 0(0).
 * Address 0 and register m0 should always return 0.
 *
-start   start   '1'
+start   start   '10'
         vtm     -1(2)
         ita     2
         atx

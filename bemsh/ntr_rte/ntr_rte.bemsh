@@ -1,7 +1,7 @@
 *
 * Test for instructions XTR, NTR, RТЕ, UZA, U1A, УТА.
 *
-start   start   '1'
+start   start   '10'
         vtm     ws+1(15)
         ita
         vtm     '77'(2)
@@ -102,7 +102,7 @@ align3  ntr     0               , нет группы
 fail    стоп    '76543'(2)
 pass    стоп    '12345'(6)
 *-------------------------
-align   адрес   start+'1777'            , данные с адреса 2000
+align   адрес   start+'1770'            , данные с адреса 2000
 cful    конд    b'7777777777777777'
 mst     пам     40
 ws      пам     1030
