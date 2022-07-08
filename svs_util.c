@@ -27,7 +27,8 @@
  * svs_dump()   - Dump memory to file.
  */
 #include "el_master_api.h"
-#include "svs_internal.h"
+#include "el_svs_api.h"
+#include "el_svs_internal.h"
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>

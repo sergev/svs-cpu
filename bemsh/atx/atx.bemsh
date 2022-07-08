@@ -1,0 +1,46 @@
+*
+* Test for instruction ATX.
+*
+start   start   '1'
+        xta
+        atx     a
+        atx     b
+        atx     c
+*
+        xta     a
+        u1a     fail
+        xta     b
+        u1a     fail
+        xta     c
+        u1a     fail
+*
+        xta     =b'1'
+        atx     b
+*
+        xta     a
+        u1a     fail
+        xta     b
+        uza     fail
+        xta     c
+        u1a     fail
+*
+        xta     =b'1'
+        atx     a
+        atx     c
+        xta
+        atx     b
+*
+        xta     a
+        uza     fail
+        xta     b
+        u1a     fail
+        xta     c
+        uza     fail
+pass    стоп    '12345'(6)
+fail    стоп    '76543'(2)
+*-------------------------
+align   адрес   start+'1777'            , данные с адреса 2000
+a       пам     1
+b       пам     1
+c       пам     1
+        fin

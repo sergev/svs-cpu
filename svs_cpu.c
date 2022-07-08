@@ -23,7 +23,7 @@
  */
 #include "el_master_api.h"
 #include "el_svs_api.h"
-#include "svs_internal.h"
+#include "el_svs_internal.h"
 #include <math.h>
 #include <float.h>
 #include <time.h>

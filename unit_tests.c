@@ -134,9 +134,114 @@ static void vtm_vzm_v1m(void *context)
     int status = ElSvsSimulate(cpu);
     ct_assertequal(status, ESS_HALT);
 
-    // Check the registers.
+    // Check registers.
     ct_assertequal(ElSvsGetPC(cpu), 016u);
     ct_assertequal(ElSvsGetM(cpu, 2), 077777u);
+}
+
+//
+// Test: J+M, UTM instructions (СЛИ, СЛИА).
+//
+static void jam_utm(void *context)
+{
+    struct ElSvsProcessor *cpu = context;
+
+    // Store the test code.
+    ElSvsStoreInstruction(cpu, 010, ElSvsAsm("уиа 1(2), уиа -17(3)"));
+    ElSvsStoreInstruction(cpu, 011, ElSvsAsm("пб 13, мода"));
+    ElSvsStoreInstruction(cpu, 012, ElSvsAsm("сли 2(2), слиа 1(3)"));
+    ElSvsStoreInstruction(cpu, 013, ElSvsAsm("пино 12(2), пино 15(3)"));
+    ElSvsStoreInstruction(cpu, 014, ElSvsAsm("стоп 12345(6), мода")); // Magic opcode: Pass
+    ElSvsStoreInstruction(cpu, 015, ElSvsAsm("стоп 76543(2), мода")); // Magic opcode: Fail
+
+    // Run the code.
+    ElSvsSetPC(cpu, 010);
+    int status = ElSvsSimulate(cpu);
+    ct_assertequal(status, ESS_HALT);
+
+    // Check registers.
+    ct_assertequal(ElSvsGetPC(cpu), 014u);
+    ct_assertequal(ElSvsGetM(cpu, 2), 0u);
+    ct_assertequal(ElSvsGetM(cpu, 3), 0u);
+}
+
+static void vlm(void *context)
+{
+}
+static void utc_wtc(void *context)
+{
+}
+static void vjm(void *context)
+{
+}
+static void mtj(void *context)
+{
+}
+static void xta_uza_u1a(void *context)
+{
+}
+static void atx(void *context)
+{
+}
+static void ati_ita(void *context)
+{
+}
+static void addr0(void *context)
+{
+}
+static void aax_aox_aex(void *context)
+{
+}
+static void arx(void *context)
+{
+}
+static void its(void *context)
+{
+}
+static void sti(void *context)
+{
+}
+static void xts(void *context)
+{
+}
+static void stx(void *context)
+{
+}
+static void asn_asx(void *context)
+{
+}
+static void acx_anx(void *context)
+{
+}
+static void apx_aux(void *context)
+{
+}
+static void stack(void *context)
+{
+}
+static void ntr_rte(void *context)
+{
+}
+static void yta(void *context)
+{
+}
+static void ean_esn_eax_esx(void *context)
+{
+}
+static void aax_asx_xsa(void *context)
+{
+}
+static void amx(void *context)
+{
+}
+static void avx(void *context)
+{
+}
+static void multiply(void *context)
+{
+}
+static void divide(void *context)
+{
 }
 
 //
@@ -148,6 +253,33 @@ int main(int argc, char *argv[])
     const struct ct_testcase tests[] = {
         ct_maketest(uj),
         ct_maketest(vtm_vzm_v1m),
+        ct_maketest(jam_utm),
+        ct_maketest(vlm),
+        ct_maketest(utc_wtc),
+        ct_maketest(vjm),
+        ct_maketest(mtj),
+        ct_maketest(xta_uza_u1a),
+        ct_maketest(atx),
+        ct_maketest(ati_ita),
+        ct_maketest(addr0),
+        ct_maketest(aax_aox_aex),
+        ct_maketest(arx),
+        ct_maketest(its),
+        ct_maketest(sti),
+        ct_maketest(xts),
+        ct_maketest(stx),
+        ct_maketest(asn_asx),
+        ct_maketest(acx_anx),
+        ct_maketest(apx_aux),
+        ct_maketest(stack),
+        ct_maketest(ntr_rte),
+        ct_maketest(yta),
+        ct_maketest(ean_esn_eax_esx),
+        ct_maketest(aax_asx_xsa),
+        ct_maketest(amx),
+        ct_maketest(avx),
+        ct_maketest(multiply),
+        ct_maketest(divide),
     };
     const struct ct_testsuite suite = ct_makesuite_setup_teardown(tests, setup, teardown);
 

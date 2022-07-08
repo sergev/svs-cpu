@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 #include "el_svs_api.h"
-#include "svs_internal.h"
+#include "el_svs_internal.h"
 #include <math.h>
 
 typedef struct {

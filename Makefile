@@ -25,3 +25,11 @@ libsvs.a:       $(OBJ)
 
 libtest.a:      $(CINYTEST)
 		$(AR) rc $@ $(CINYTEST)
+
+###
+svs_arith.o: svs_arith.c el_svs_api.h el_svs_internal.h
+svs_cpu.o: svs_cpu.c el_master_api.h el_svs_api.h el_svs_internal.h
+svs_mmu.o: svs_mmu.c el_master_api.h el_svs_api.h el_svs_internal.h
+svs_trace.o: svs_trace.c el_svs_internal.h
+svs_util.o: svs_util.c el_master_api.h el_svs_api.h el_svs_internal.h
+unit_tests.o: unit_tests.c cinytest/ciny.h el_master_api.h el_svs_api.h

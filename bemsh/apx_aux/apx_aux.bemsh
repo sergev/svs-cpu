@@ -1,0 +1,30 @@
+*
+* Test for instructions APX, AUX.
+*
+start   start   '1'
+        xta     chess
+        apx     cful
+        aux     c0ful
+        aex     chess+1
+        u1a     fail
+        xta     chess
+        apx     chess+1
+        u1a     fail
+        xta     chess
+        apx     chess
+        aux     chess+1
+        aex     chess+1
+        u1a     fail
+        xta     cful
+        aux     chess+1
+        aex     chess+1
+        u1a     fail
+pass    стоп    '12345'(6)
+fail    стоп    '76543'(2)
+*-------------------------
+align   адрес   start+'1777'            , данные с адреса 2000
+cful    конд    b'7777777777777777'
+c0ful   конд    b'3777777777777777'
+chess   конд    b'5252525252525252'
+        конд    b'2525252525252525'
+        fin

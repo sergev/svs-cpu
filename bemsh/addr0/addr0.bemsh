@@ -1,0 +1,34 @@
+*
+* Test for instructions ATX 0(0), XTA 0(0), ATI 0(0), ITA 0(0).
+* Address 0 and register m0 should always return 0.
+*
+start   start   '1'
+        vtm     -1(2)
+        ita     2
+        atx
+a0left  xta                     , слева
+        ati     2
+        v1m     fail(2)
+        vtm     -1(2)
+        ita     2
+a0rght  atx
+        xta                     , справа
+        ati     2
+        v1m     fail(2)
+*
+        vtm     -1(2)
+        ita     2
+        ati
+m0left  ita                     , слева
+        ati     2
+        v1m     fail(2)
+        vtm     -1(2)
+        ita     2
+m0rght  ati
+        ita                     , справа
+        ati     2
+        v1m     fail(2)
+*
+pass    стоп    '12345'(6)
+fail    стоп    '76543'(2)
+        fin

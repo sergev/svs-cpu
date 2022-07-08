@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#include "svs_internal.h"
+#include "el_svs_internal.h"
 
 void svs_trace_opcode(struct ElSvsProcessor *cpu, int paddr)
 {

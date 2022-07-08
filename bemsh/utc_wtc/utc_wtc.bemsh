@@ -1,0 +1,57 @@
+*
+* Test for instructions UTC, WTC.
+*
+start   start   '1'
+        utc     -1
+        vtm     (3)
+        vzm     fail(3)
+        utm     1(3)
+        v1m     fail(3)
+a       utc     -1
+b       vtm     (3)
+        vzm     fail(3)
+        utm     1(3)
+        v1m     fail(3)
+c       wtc     mmask
+        vtm     (3)
+        vzm     fail(3)
+        utm     1(3)
+d       v1m     fail(3)
+        wtc     mmask
+e       vtm     (3)
+        vzm     fail(3)
+        utm     1(3)
+        v1m     fail(3)
+        utc     -7
+        utc     8
+        vtm     -2(3)
+        vzm     fail(3)
+        utm     1(3)
+        v1m     fail(3)
+        wtc     mmask
+        utc     8
+        vtm     -6(3)
+        utm     -1(3)
+        v1m     fail(3)
+        vtm     -1(3)
+*
+        wtc     chess+1(3)
+        vtm     (4)
+        mtj     5(4)
+        utm     -'25252'(5)
+        v1m     fail(5)
+        utm     1(3)
+*
+        wtc     chess+1(3)
+        vtm     (4)
+        mtj     5(4)
+        utm     -'52525'(5)
+        v1m     fail(5)
+pass    стоп    '12345'(6)
+fail    стоп    '76543'(2)
+*-------------------------
+align   адрес   start+'1777'            , данные с адреса 2000
+mmask   конд    b'77777'
+chess   конд    b'5252525252525252'
+        конд    b'2525252525252525'
+        fin
