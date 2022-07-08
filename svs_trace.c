@@ -21,26 +21,24 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#include "svs_defs.h"
+#include "svs_internal.h"
 
-static CORE cpu_state[NUM_CORES];           /* previous state for comparison */
-
-void svs_trace_opcode(CORE *cpu, int paddr)
+void svs_trace_opcode(struct ElSvsProcessor *cpu, int paddr)
 {
     // Print instruction.
-    fprintf(sim_log, "cpu%d %05o %07o %c: ",
-        cpu->index, cpu->PC, paddr,
-        (cpu->RUU & RUU_RIGHT_INSTR) ? 'R' : 'L');
-    svs_fprint_insn(sim_log, cpu->RK);
-    fprintf(sim_log, " ");
-    svs_fprint_cmd(sim_log, cpu->RK);
-    fprintf(sim_log, "\n");
+    fprintf(cpu->log_output, "cpu%d %05o %07o %c: ",
+        cpu->index, cpu->core.PC, paddr,
+        (cpu->core.RUU & RUU_RIGHT_INSTR) ? 'R' : 'L');
+    svs_fprint_insn(cpu->log_output, cpu->RK);
+    fprintf(cpu->log_output, " ");
+    svs_fprint_cmd(cpu->log_output, cpu->RK);
+    fprintf(cpu->log_output, "\n");
 }
 
 /*
  * Print 32-bit value as octal.
  */
-static void fprint_32bits(FILE *of, t_value value)
+static void fprint_32bits(FILE *of, uint64_t value)
 {
     fprintf(of, "%03o %04o %04o",
         (int) (value >> 24) & 0377,
@@ -49,101 +47,112 @@ static void fprint_32bits(FILE *of, t_value value)
 }
 
 /*
+ * Print 48-bit value as octal.
+ */
+void svs_fprint_48bits(FILE *of, uint64_t value)
+{
+    fprintf(of, "%04o %04o %04o %04o",
+        (int) (value >> 36) & 07777,
+        (int) (value >> 24) & 07777,
+        (int) (value >> 12) & 07777,
+        (int) value & 07777);
+}
+
+/*
  * Печать регистров процессора, изменившихся с прошлого вызова.
  */
-void svs_trace_registers(CORE *cpu)
+void svs_trace_registers(struct ElSvsProcessor *cpu)
 {
-    CORE *prev = &cpu_state[cpu->index];
     int i;
 
-    if (cpu->ACC != prev->ACC) {
-        fprintf(sim_log, "cpu%d       Write ACC = ", cpu->index);
-        fprint_sym(sim_log, 0, &cpu->ACC, 0, 0);
-        fprintf(sim_log, "\n");
+    if (cpu->core.ACC != cpu->prev.ACC) {
+        fprintf(cpu->log_output, "cpu%d       Write ACC = ", cpu->index);
+        svs_fprint_48bits(cpu->log_output, cpu->core.ACC);
+        fprintf(cpu->log_output, "\n");
     }
-    if (cpu->RMR != prev->RMR) {
-        fprintf(sim_log, "cpu%d       Write RMR = ", cpu->index);
-        fprint_sym(sim_log, 0, &cpu->RMR, 0, 0);
-        fprintf(sim_log, "\n");
+    if (cpu->core.RMR != cpu->prev.RMR) {
+        fprintf(cpu->log_output, "cpu%d       Write RMR = ", cpu->index);
+        svs_fprint_48bits(cpu->log_output, cpu->core.RMR);
+        fprintf(cpu->log_output, "\n");
     }
-    for (i = 0; i < NREGS; i++) {
-        if (cpu->M[i] != prev->M[i])
-            fprintf(sim_log, "cpu%d       Write M%o = %05o\n",
-                cpu->index, i, cpu->M[i]);
+    for (i = 0; i < SVS_NREGS; i++) {
+        if (cpu->core.M[i] != cpu->prev.M[i])
+            fprintf(cpu->log_output, "cpu%d       Write M%o = %05o\n",
+                cpu->index, i, cpu->core.M[i]);
     }
-    if (cpu->RAU != prev->RAU)
-        fprintf(sim_log, "cpu%d       Write RAU = %02o\n",
-            cpu->index, cpu->RAU);
-    if ((cpu->RUU & ~RUU_RIGHT_INSTR) != (prev->RUU & ~RUU_RIGHT_INSTR))
-        fprintf(sim_log, "cpu%d       Write RUU = %03o\n",
-            cpu->index, cpu->RUU);
+    if (cpu->core.RAU != cpu->prev.RAU)
+        fprintf(cpu->log_output, "cpu%d       Write RAU = %02o\n",
+            cpu->index, cpu->core.RAU);
+    if ((cpu->core.RUU & ~RUU_RIGHT_INSTR) != (cpu->prev.RUU & ~RUU_RIGHT_INSTR))
+        fprintf(cpu->log_output, "cpu%d       Write RUU = %03o\n",
+            cpu->index, cpu->core.RUU);
     for (i = 0; i < 8; i++) {
-        if (cpu->RP[i] != prev->RP[i]) {
-            fprintf(sim_log, "cpu%d       Write RP%o = ",
+        if (cpu->core.RP[i] != cpu->prev.RP[i]) {
+            fprintf(cpu->log_output, "cpu%d       Write RP%o = ",
                 cpu->index, i);
-            fprint_sym(sim_log, 0, &cpu->RP[i], 0, 0);
-            fprintf(sim_log, "\n");
+            svs_fprint_48bits(cpu->log_output, cpu->core.RP[i]);
+            fprintf(cpu->log_output, "\n");
         }
-        if (cpu->RPS[i] != prev->RPS[i]) {
-            fprintf(sim_log, "cpu%d       Write RPS%o = ",
+        if (cpu->core.RPS[i] != cpu->prev.RPS[i]) {
+            fprintf(cpu->log_output, "cpu%d       Write RPS%o = ",
                 cpu->index, i);
-            fprint_sym(sim_log, 0, &cpu->RPS[i], 0, 0);
-            fprintf(sim_log, "\n");
+            svs_fprint_48bits(cpu->log_output, cpu->core.RPS[i]);
+            fprintf(cpu->log_output, "\n");
         }
     }
-    if (cpu->RZ != prev->RZ) {
-        fprintf(sim_log, "cpu%d       Write RZ = ", cpu->index);
-        fprint_32bits(sim_log, cpu->RZ);
-        fprintf(sim_log, "\n");
+    if (cpu->core.RZ != cpu->prev.RZ) {
+        fprintf(cpu->log_output, "cpu%d       Write RZ = ", cpu->index);
+        fprint_32bits(cpu->log_output, cpu->core.RZ);
+        fprintf(cpu->log_output, "\n");
     }
-    if (cpu->bad_addr != prev->bad_addr) {
-        fprintf(sim_log, "cpu%d       Write EADDR = %03o\n",
-            cpu->index, cpu->bad_addr);
+    if (cpu->core.bad_addr != cpu->prev.bad_addr) {
+        fprintf(cpu->log_output, "cpu%d       Write EADDR = %03o\n",
+            cpu->index, cpu->core.bad_addr);
     }
-    if (cpu->TagR != prev->TagR) {
-        fprintf(sim_log, "cpu%d       Write TAG = %03o\n",
-            cpu->index, cpu->TagR);
+    if (cpu->core.TagR != cpu->prev.TagR) {
+        fprintf(cpu->log_output, "cpu%d       Write TAG = %03o\n",
+            cpu->index, cpu->core.TagR);
     }
-    if (cpu->PP != prev->PP) {
-        fprintf(sim_log, "cpu%d       Write PP = ", cpu->index);
-        fprint_sym(sim_log, 0, &cpu->PP, 0, 0);
-        fprintf(sim_log, "\n");
+    if (cpu->core.PP != cpu->prev.PP) {
+        fprintf(cpu->log_output, "cpu%d       Write PP = ", cpu->index);
+        svs_fprint_48bits(cpu->log_output, cpu->core.PP);
+        fprintf(cpu->log_output, "\n");
     }
-    if (cpu->OPP != prev->OPP) {
-        fprintf(sim_log, "cpu%d       Write OPP = ", cpu->index);
-        fprint_sym(sim_log, 0, &cpu->OPP, 0, 0);
-        fprintf(sim_log, "\n");
+    if (cpu->core.OPP != cpu->prev.OPP) {
+        fprintf(cpu->log_output, "cpu%d       Write OPP = ", cpu->index);
+        svs_fprint_48bits(cpu->log_output, cpu->core.OPP);
+        fprintf(cpu->log_output, "\n");
     }
-    if (cpu->POP != prev->POP) {
-        fprintf(sim_log, "cpu%d       Write POP = ", cpu->index);
-        fprint_sym(sim_log, 0, &cpu->POP, 0, 0);
-        fprintf(sim_log, "\n");
+    if (cpu->core.POP != cpu->prev.POP) {
+        fprintf(cpu->log_output, "cpu%d       Write POP = ", cpu->index);
+        svs_fprint_48bits(cpu->log_output, cpu->core.POP);
+        fprintf(cpu->log_output, "\n");
     }
-    if (cpu->OPOP != prev->OPOP) {
-        fprintf(sim_log, "cpu%d       Write OPOP = ", cpu->index);
-        fprint_sym(sim_log, 0, &cpu->OPOP, 0, 0);
-        fprintf(sim_log, "\n");
+    if (cpu->core.OPOP != cpu->prev.OPOP) {
+        fprintf(cpu->log_output, "cpu%d       Write OPOP = ", cpu->index);
+        svs_fprint_48bits(cpu->log_output, cpu->core.OPOP);
+        fprintf(cpu->log_output, "\n");
     }
-    if (cpu->RKP != prev->RKP) {
-        fprintf(sim_log, "cpu%d       Write RKP = ", cpu->index);
-        fprint_sym(sim_log, 0, &cpu->RKP, 0, 0);
-        fprintf(sim_log, "\n");
+    if (cpu->core.RKP != cpu->prev.RKP) {
+        fprintf(cpu->log_output, "cpu%d       Write RKP = ", cpu->index);
+        svs_fprint_48bits(cpu->log_output, cpu->core.RKP);
+        fprintf(cpu->log_output, "\n");
     }
-    if (cpu->RPR != prev->RPR) {
-        fprintf(sim_log, "cpu%d       Write RPR = ", cpu->index);
-        fprint_sym(sim_log, 0, &cpu->RPR, 0, 0);
-        fprintf(sim_log, "\n");
+    if (cpu->core.RPR != cpu->prev.RPR) {
+        fprintf(cpu->log_output, "cpu%d       Write RPR = ", cpu->index);
+        svs_fprint_48bits(cpu->log_output, cpu->core.RPR);
+        fprintf(cpu->log_output, "\n");
     }
-    if (cpu->GRVP != prev->GRVP) {
-        fprintf(sim_log, "cpu%d       Write GRVP = ", cpu->index);
-        fprint_32bits(sim_log, cpu->GRVP);
-        fprintf(sim_log, "\n");
+    if (cpu->core.GRVP != cpu->prev.GRVP) {
+        fprintf(cpu->log_output, "cpu%d       Write GRVP = ", cpu->index);
+        fprint_32bits(cpu->log_output, cpu->core.GRVP);
+        fprintf(cpu->log_output, "\n");
     }
-    if (cpu->GRM != prev->GRM) {
-        fprintf(sim_log, "cpu%d       Write GRM = ", cpu->index);
-        fprint_32bits(sim_log, cpu->GRM);
-        fprintf(sim_log, "\n");
+    if (cpu->core.GRM != cpu->prev.GRM) {
+        fprintf(cpu->log_output, "cpu%d       Write GRM = ", cpu->index);
+        fprint_32bits(cpu->log_output, cpu->core.GRM);
+        fprintf(cpu->log_output, "\n");
     }
 
-    *prev = *cpu;
+    cpu->prev = cpu->core;
 }

@@ -8,82 +8,47 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <inttypes.h>
-#include "ifcomp.h"
-
-static const char fname_a[] = "a.input";
-static const char fname_b[] = "b.input";
-static const char fname_out[] = "result.output";
+#include "el_master_api.h"
+#include "el_svs_api.h"
 
 //
-// Create file with given name and contents.
+// Mock implementation of the physical memory.
 //
-static void create_file(const char *fname_a, const char *input_a)
+static ElMasterWord memory[1024*1024];
+static ElMasterTag mem_tag[1024*1024];
+
+//
+// Read a word with tag from RAM.
+// Mock implementation of the physical memory.
+//
+ElMasterStatus elMasterRamWordRead(
+    ElMasterRamAddress address,
+    ElMasterTag *pTag,
+    ElMasterWord *pWord)
 {
-    int fd = open(fname_a, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if (fd < 0) {
-        perror(fname_a);
-        exit(1);
-    }
-    write(fd, input_a, strlen(input_a));
-    close(fd);
+    if (address >= 1024*1024)
+        fail();
+
+    *pWord = memory[address];
+    *pTag = mem_tag[address];
+    return EMS_OK;
 }
 
 //
-// Redirect the standard output to the given file.
+// Write a word with tag to RAM.
+// Mock implementation of the physical memory.
 //
-static void setup_output(const char *fname_out)
+ElMasterStatus elMasterRamWordWrite(
+    ElMasterRamAddress address,
+    ElMasterTag tag,
+    ElMasterWord word)
 {
-    int fd = open(fname_out, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if (fd < 0) {
-        perror(fname_out);
-        exit(1);
-    }
-    // Redirect stdout to this file.
-    dup2(fd, 1);
-    close(fd);
-}
+    if (address >= 1024*1024)
+        fail();
 
-//
-// Read file contents.
-// The caller is responsible for deallocation of the result.
-//
-static const char *get_output(const char *fname_out)
-{
-    // Redirect stdout to stderr.
-    close(1);
-    dup2(2, 1);
-
-    int fd = open(fname_out, O_RDONLY);
-    if (fd < 0) {
-        perror(fname_out);
-        exit(1);
-    }
-    off_t nbytes = lseek(fd, 0, SEEK_END);
-    char *contents = malloc(1 + nbytes);
-    if (!contents) {
-        printf("Failed to allocate %ju bytes\n", (uintmax_t)nbytes + 1);
-        exit(1);
-    }
-    lseek(fd, 0, SEEK_SET);
-    read(fd, contents, nbytes);
-    contents[nbytes] = 0;
-    close(fd);
-    return contents;
-}
-
-//
-// Run IFCOMP with given inputs.
-// Return result as a string.
-// The caller must deallocate the result.
-//
-static const char *run_ifcomp(const char *input_a, const char *input_b)
-{
-    create_file(fname_a, input_a);
-    create_file(fname_b, input_b);
-    setup_output(fname_out);
-    ifcomp(fname_a, fname_b);
-    fflush(stdout);
-    return get_output(fname_out);
+    memory[address] = word;
+    mem_tag[address] = tag;
+    return EMS_OK;
 }
 
 //
@@ -91,28 +56,31 @@ static const char *run_ifcomp(const char *input_a, const char *input_b)
 //
 void exit(int status)
 {
-    const char *result = get_output("result.output");
-    printf("%s", result);
-    free((void*)result);
     for (;;)
         fail();
 }
 
 //
-// A test case with identical input files.
+// UJ instruction (ПБ).
 //
-static void ab_ab(void **unused)
+static void uj(void **unused)
 {
-    const char *a = "A\n"   "B\n";
-    const char *b = "A\n"   "B\n";
-    const char *expect = "       0 lines deleted from old.\n"
-                         "       0 lines inserted in new.\n"
-                         "       0 lines deleted from old and replaced with 0 lines of new.\n"
-                         "       0 lines moved in old.\n"
-                         "       0 change blocks.\n";
-    const char *result = run_ifcomp(a, b);
-    assert_string_equal(result, expect);
-    free((void*)result);
+    // Instantiate the processor.
+    struct ElSvsProcessor *cpu = ElSvsAllocate(0);
+
+    // Store a test code.
+    ElSvsStoreInstruction(cpu, 1, 000, 0300, 000003, 000, 0220, 000000);    // 1: пб 3
+    ElSvsStoreInstruction(cpu, 2, 002, 0330, 076543, 000, 0220, 000000);    // 2: стоп '76543'(2) -- fail
+    ElSvsStoreInstruction(cpu, 3, 006, 0330, 012345, 000, 0220, 000000);    // 3: стоп '12345'(6) -- pass
+
+    // Run the code, starting at address 1.
+    ElSvsSetPC(cpu, 1);
+    ElSvsStatus status = ElSvsSimulate(cpu);
+    assert_int_equal(status, ESS_HALT);
+
+    // Check the PC address.
+    assert_int_equal(ElSvsGetPC(cpu), 3);
+    free((void*)cpu);
 }
 
 //
@@ -121,7 +89,7 @@ static void ab_ab(void **unused)
 int main()
 {
     const struct CMUnitTest tests[] = {
-        cmocka_unit_test(ab_ab),
+        cmocka_unit_test(uj),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

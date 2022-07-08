@@ -1,5 +1,5 @@
 /*
- * SVS simulator interface
+ * SVS utility routines
  *
  * Copyright (c) 2022 Leonid Broukhis, Serge Vakulenko
  *
@@ -21,19 +21,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * This file implements three essential functions:
+ * This file implements two essential functions:
  *
- * sim_load()   - loading and dumping memory and CPU state
- *                in a way, specific for BESM-6 architecture
- * fprint_sym() - print a machune instruction using
- *                opcode mnemonic or in a digital format
- * parse_sym()  - scan a string and build an instruction
- *                word from it
+ * svs_load()   - Load memory from file.
+ * svs_dump()   - Dump memory to file.
  */
-#include "svs_defs.h"
+#include "el_master_api.h"
+#include "svs_internal.h"
 #include <math.h>
+#include <string.h>
+#include <stdlib.h>
 
-const char *opname_short_bemsh[64] = {
+static const char *opname_short_bemsh[64] = {
     "зп",  "зпм", "рег", "счм", "сл",  "вч",  "вчоб","вчаб",
     "сч",  "и",   "нтж", "слц", "знак","или", "дел", "умн",
     "сбр", "рзб", "чед", "нед", "слп", "вчп", "сд",  "рж",
@@ -49,7 +48,7 @@ static const char *opname_long_bemsh[16] = {
     "пб",  "пв",  "выпр","стоп","пио", "пино","втбрз","цикл",
 };
 
-const char *opname_short_madlen[64] = {
+static const char *opname_short_madlen[64] = {
     "atx",  "stx",  "mod",  "xts",  "a+x",  "a-x",  "x-a",  "amx",
     "xta",  "aax",  "aex",  "arx",  "avx",  "aox",  "a/x",  "a*x",
     "apx",  "aux",  "acx",  "anx",  "e+x",  "e-x",  "asx",  "xtr",
@@ -69,23 +68,25 @@ static const char *opname_long_madlen[16] = {
  * Выдача мнемоники по коду инструкции.
  * Код должен быть в диапазоне 000..077 или 0200..0370.
  */
-const char *svs_opname(int opcode)
+static const char *svs_opname(int opcode)
 {
-    if (sim_switches & SWMASK('L')) {
-        /* Latin mnemonics. */
-        if (opcode & 0200)
-            return opname_long_madlen[(opcode >> 3) & 017];
-        return opname_short_madlen[opcode];
-    }
+#if 0
+    // Madlen mnemonics.
+    if (opcode & 0200)
+        return opname_long_madlen[(opcode >> 3) & 017];
+    return opname_short_madlen[opcode];
+#else
+    // Bemsh mnemonics.
     if (opcode & 0200)
         return opname_long_bemsh[(opcode >> 3) & 017];
     return opname_short_bemsh[opcode];
+#endif
 }
 
 /*
  * Выдача кода инструкции по мнемонике (UTF-8).
  */
-int svs_opcode(char *instr)
+static int svs_opcode(char *instr)
 {
     int i;
 
@@ -101,77 +102,6 @@ int svs_opcode(char *instr)
 }
 
 /*
- * Выдача на консоль и в файл протокола.
- * Если первый символ формата - подчерк, на консоль не печатаем.
- * Добавляет перевод строки.
- */
-void svs_log(const char *fmt, ...)
-{
-    va_list args;
-
-    if (*fmt == '_')
-        ++fmt;
-    else {
-        va_start(args, fmt);
-        vprintf(fmt, args);
-        printf("\r\n");
-        va_end(args);
-    }
-    if (sim_log) {
-        va_start(args, fmt);
-        vfprintf(sim_log, fmt, args);
-        if (sim_log == stdout)
-            fprintf(sim_log, "\r");
-        fprintf(sim_log, "\n");
-        fflush(sim_log);
-        va_end(args);
-    }
-}
-
-/*
- * Не добавляет перевод строки.
- */
-void svs_log_cont(const char *fmt, ...)
-{
-    va_list args;
-
-    if (*fmt == '_')
-        ++fmt;
-    else {
-        va_start(args, fmt);
-        vprintf(fmt, args);
-        va_end(args);
-    }
-    if (sim_log) {
-        va_start(args, fmt);
-        vfprintf(sim_log, fmt, args);
-        fflush(sim_log);
-        va_end(args);
-    }
-}
-
-/*
- * Выдача на консоль и в файл трассировки (если он есть).
- * Добавляет перевод строки.
- */
-void svs_debug(const char *fmt, ...)
-{
-    va_list args;
-
-    va_start(args, fmt);
-    vprintf(fmt, args);
-    printf("\r\n");
-    va_end(args);
-    if (sim_log && sim_log != stdout) {
-        va_start(args, fmt);
-        vfprintf(sim_log, fmt, args);
-        fprintf(sim_log, "\n");
-        fflush(sim_log);
-        va_end(args);
-    }
-}
-
-/*
  * Преобразование вещественного числа в формат БЭСМ-6.
  *
  * Представление чисел в IEEE 754 (double):
@@ -183,9 +113,9 @@ void svs_debug(const char *fmt, ...)
  *      48——–42 41   40————————————————–1
  *      порядок знак мантисса в доп. коде
  */
-t_value ieee_to_svs(double d)
+uint64_t ieee_to_svs(double d)
 {
-    t_value word;
+    uint64_t word;
     int exponent;
     int sign;
 
@@ -195,7 +125,7 @@ t_value ieee_to_svs(double d)
     d = frexp(d, &exponent);
     /* 0.5 <= d < 1.0 */
     d = ldexp(d, 40);
-    word = (t_value)d;
+    word = (uint64_t)d;
     if (d - word >= 0.5)
         word += 1;                      /* Округление. */
     if (exponent < -64)
@@ -207,11 +137,11 @@ t_value ieee_to_svs(double d)
     }
     if (sign)
         word = 0x20000000000LL-word;    /* Знак. */
-    word |= ((t_value) (exponent + 64)) << 41;
+    word |= ((uint64_t) (exponent + 64)) << 41;
     return word;
 }
 
-double svs_to_ieee(t_value word)
+double svs_to_ieee(uint64_t word)
 {
     double mantissa;
     int exponent;
@@ -222,7 +152,7 @@ double svs_to_ieee(t_value word)
     /* Сдвигаем так, чтобы знак мантиссы пришелся на знак целого;
      * таким образом, mantissa равно исходной мантиссе, умноженной на 2**63.
      */
-    mantissa = (double)(((t_int64) word) << (64 - 48 + 7));
+    mantissa = (double)(((int64_t) word) << (64 - 48 + 7));
 
     exponent = word >> 41;
 
@@ -233,7 +163,7 @@ double svs_to_ieee(t_value word)
 /*
  * Пропуск пробелов.
  */
-CONST char *skip_spaces(CONST char *p)
+static const char *skip_spaces(const char *p)
 {
     for (;;) {
         if (*p == (char) 0xEF && p[1] == (char) 0xBB && p[2] == (char) 0xBF) {
@@ -257,7 +187,7 @@ CONST char *skip_spaces(CONST char *p)
  * Fetch Unicode symbol from UTF-8 string.
  * Advance string pointer.
  */
-int utf8_to_unicode(CONST char **p)
+static int utf8_to_unicode(const char **p)
 {
     int c1, c2, c3;
 
@@ -271,7 +201,7 @@ int utf8_to_unicode(CONST char **p)
     return (c1 & 0x0f) << 12 | (c2 & 0x3f) << 6 | (c3 & 0x3f);
 }
 
-char *svs_parse_octal(const char *cptr, int *offset)
+static char *svs_parse_octal(const char *cptr, int *offset)
 {
     char *eptr;
 
@@ -281,7 +211,7 @@ char *svs_parse_octal(const char *cptr, int *offset)
     return eptr;
 }
 
-static CONST char *get_alnum(CONST char *iptr, char *optr)
+static const char *get_alnum(const char *iptr, char *optr)
 {
     while ((*iptr >= 'a' && *iptr<='z') ||
            (*iptr >= 'A' && *iptr<='Z') ||
@@ -296,10 +226,10 @@ static CONST char *get_alnum(CONST char *iptr, char *optr)
  * Parse single instruction (half word).
  * Allow mnemonics or octal code.
  */
-CONST char *parse_instruction(CONST char *cptr, uint32 *val)
+static const char *parse_instruction(const char *cptr, uint32_t *val)
 {
     int opcode, reg, addr, negate;
-    char gbuf[CBUFSIZE];
+    char buf[BUFSIZ];
 
     cptr = skip_spaces(cptr);                       /* absorb spaces */
     if (*cptr >= '0' && *cptr <= '7') {
@@ -334,10 +264,10 @@ CONST char *parse_instruction(CONST char *cptr, uint32 *val)
         }
     } else {
         /* Мнемоническое представление команды. */
-        cptr = get_alnum(cptr, gbuf);               /* get opcode */
-        opcode = svs_opcode(gbuf);
+        cptr = get_alnum(cptr, buf);               /* get opcode */
+        opcode = svs_opcode(buf);
         if (opcode < 0) {
-            /*printf("Bad opname: %s\n", gbuf);*/
+            /*printf("Bad opname: %s\n", buf);*/
             return 0;
         }
         negate = 0;
@@ -389,34 +319,34 @@ CONST char *parse_instruction(CONST char *cptr, uint32 *val)
 /*
  * Instruction parse: two commands per word.
  */
-t_stat parse_instruction_word(CONST char *cptr, t_value *val)
+static bool parse_instruction_word(const char *cptr, uint64_t *val)
 {
-    uint32 left, right;
+    uint32_t left, right;
 
     *val = 0;
     cptr = parse_instruction(cptr, &left);
     if (! cptr)
-        return SCPE_ARG;
+        return false;
     right = 0;
     cptr = skip_spaces(cptr);
     if (*cptr == ',') {
         cptr = parse_instruction(cptr + 1, &right);
         if (! cptr)
-            return SCPE_ARG;
+            return false;
     }
     cptr = skip_spaces(cptr);                       /* absorb spaces */
     if (*cptr != 0 && *cptr != ';' && *cptr != '\n' && *cptr != '\r') {
         /*printf("Extra symbols at eoln: %s\n", cptr);*/
-        return SCPE_2MARG;
+        return false;
     }
-    *val = (t_value) left << 24 | right;
-    return SCPE_OK;
+    *val = (uint64_t) left << 24 | right;
+    return true;
 }
 
 /*
  * Печать машинной инструкции с мнемоникой.
  */
-void svs_fprint_cmd(FILE *of, uint32 cmd)
+void svs_fprint_cmd(FILE *of, uint32_t cmd)
 {
     int reg, opcode, addr;
 
@@ -448,7 +378,7 @@ void svs_fprint_cmd(FILE *of, uint32 cmd)
 /*
  * Печать машинной инструкции в восьмеричном виде.
  */
-void svs_fprint_insn(FILE *of, uint32 insn)
+void svs_fprint_insn(FILE *of, uint32_t insn)
 {
     if (insn & BBIT(20))
         fprintf(of, "%02o %02o %05o ",
@@ -456,82 +386,6 @@ void svs_fprint_insn(FILE *of, uint32 insn)
     else
         fprintf(of, "%02o %03o %04o ",
                  insn >> 20, (insn >> 12) & 0177, insn & 07777);
-}
-
-/*
- * Symbolic decode
- *
- * Inputs:
- *      *of     = output stream
- *      addr    = current PC
- *      *valp   = pointer to data
- *      *uptr   = pointer to unit
- *      sw      = switches
- * Outputs:
- *      return  = status code
- */
-t_stat fprint_sym(FILE *of, t_addr addr, t_value *valp,
-                   UNIT *uptr, int32 sw)
-{
-    t_value value = valp[0];
-
-    if (sw & SWMASK('M')) {
-        /* symbolic decode */
-        CORE *cpu = 0;
-
-        if (uptr && (sw & SIM_SW_STOP)) {
-            /* must be CPU */
-            DEVICE *dev = find_dev_from_unit(uptr);
-            if (! dev)
-                return SCPE_ARG;
-
-            cpu = (CORE*) dev->ctxt;
-            if (! cpu)
-                return SCPE_ARG;
-        }
-
-        if ((cpu != 0) && !(cpu->RUU & RUU_RIGHT_INSTR))
-            fprintf(of, "-> ");
-
-        svs_fprint_cmd(of, (uint32)(value >> 24));
-
-        if (sw & SIM_SW_STOP)                       /* stop point */
-            fprintf(of, ", ");
-        else
-            fprintf(of, ",\n\t");
-
-        if ((cpu != 0) && (cpu->RUU & RUU_RIGHT_INSTR))
-            fprintf(of, "-> ");
-
-        svs_fprint_cmd(of, value & BITS(24));
-
-    } else if (sw & SWMASK('I')) {
-        svs_fprint_insn(of, (value >> 24) & BITS(24));
-        svs_fprint_insn(of, value & BITS(24));
-
-    } else if (sw & SWMASK('F')) {
-        fprintf(of, "%#.10g", svs_to_ieee(value));
-
-    } else if (sw & SWMASK('B')) {
-        fprintf(of, "%03o %03o %03o %03o %03o %03o",
-                 (int) (value >> 40) & 0377,
-                 (int) (value >> 32) & 0377,
-                 (int) (value >> 24) & 0377,
-                 (int) (value >> 16) & 0377,
-                 (int) (value >> 8) & 0377,
-                 (int) value & 0377);
-
-    } else if (sw & SWMASK('X')) {
-        fprintf(of, "%012llx", value & BITS48);
-
-    } else
-        fprintf(of, "%04o %04o %04o %04o",
-                 (int) (value >> 36) & 07777,
-                 (int) (value >> 24) & 07777,
-                 (int) (value >> 12) & 07777,
-                 (int) value & 07777);
-
-    return SCPE_OK;
 }
 
 /*
@@ -546,12 +400,13 @@ t_stat fprint_sym(FILE *of, t_addr addr, t_value *valp,
  * Outputs:
  *      status  = error status
  */
-t_stat parse_sym(CONST char *cptr, t_addr addr, UNIT *uptr, t_value *val, int32 sw)
+#if 0
+bool parse_sym(const char *cptr, t_addr addr, UNIT *uptr, uint64_t *val, int32_t sw)
 {
-    int32 i;
+    int32_t i;
 
-    if (! parse_instruction_word(cptr, val))        /* symbolic parse? */
-        return SCPE_OK;
+    if (parse_instruction_word(cptr, val))          /* symbolic parse? */
+        return true;
 
     val[0] = 0;
     for (i=0; i<16; i++) {
@@ -562,10 +417,11 @@ t_stat parse_sym(CONST char *cptr, t_addr addr, UNIT *uptr, t_value *val, int32 
     }
     if (*cptr != 0 && *cptr != ';' && *cptr != '\n' && *cptr != '\r') {
         /*printf("Extra symbols at eoln: %s\n", cptr);*/
-        return SCPE_2MARG;
+        return false;
     }
-    return SCPE_OK;
+    return true;
 }
+#endif
 
 /*
  * Чтение строки входного файла.
@@ -576,15 +432,15 @@ t_stat parse_sym(CONST char *cptr, t_addr addr, UNIT *uptr, t_value *val, int32 
  * с 0123 4567 0123 4567       - восьмеричное слово
  * к 00 22 00000 00 010 0000   - команды
  */
-t_stat svs_read_line(FILE *input, int *type, t_value *val)
+static bool svs_read_line(FILE *input, int *type, uint64_t *val)
 {
     char buf[512];
-    CONST char *p;
+    const char *p;
     int i, c;
 again:
     if (! fgets(buf, sizeof(buf), input)) {
         *type = 0;
-        return SCPE_OK;
+        return true;
     }
     p = skip_spaces(buf);
     if (*p == '\n' || *p == ';')
@@ -596,7 +452,7 @@ again:
         /* Адрес размещения данных. */
         *type = ':';
         *val = strtol(p, 0, 8);
-        return SCPE_OK;
+        return true;
     }
     if (c == CYRILLIC_SMALL_LETTER_PE ||
         c == CYRILLIC_CAPITAL_LETTER_PE ||
@@ -604,7 +460,7 @@ again:
         /* Стартовый адрес. */
         *type = '@';
         *val = strtol(p, 0, 8);
-        return SCPE_OK;
+        return true;
     }
     if (c == CYRILLIC_SMALL_LETTER_CHE ||
         c == CYRILLIC_CAPITAL_LETTER_CHE ||
@@ -612,7 +468,7 @@ again:
         /* Вещественное число. */
         *type = '=';
         *val = ieee_to_svs(strtod(p, 0));
-        return SCPE_OK;
+        return true;
     }
     if (c == CYRILLIC_SMALL_LETTER_ES ||
         c == CYRILLIC_CAPITAL_LETTER_ES ||
@@ -631,41 +487,40 @@ again:
             }
             *val = *val << 3 | (*p++ - '0');
         }
-        return SCPE_OK;
+        return true;
     }
     if (c == CYRILLIC_SMALL_LETTER_KA ||
         c == CYRILLIC_CAPITAL_LETTER_KA ||
         c == 'k' || c == 'K') {
         /* Команда. */
         *type = '*';
-        if (parse_instruction_word(p, val) != SCPE_OK)
+        if (!parse_instruction_word(p, val))
             goto bad;
-        return SCPE_OK;
+        return true;
     }
     /* Неверная строка входного файла */
 bad:
-    svs_log("Invalid input line: %s", buf);
-    return SCPE_FMT;
+    printf("Invalid input line: %s", buf);
+    return false;
 }
 
 /*
  * Load memory from file.
  */
-static t_stat svs_load(CORE *cpu, FILE *input)
+bool svs_load(struct ElSvsProcessor *cpu, FILE *input)
 {
     int addr, type;
-    t_value word;
-    t_stat err;
+    uint64_t word;
 
     addr = 1;
-    cpu->PC = 1;
+    cpu->core.PC = 1;
     for (;;) {
-        err = svs_read_line(input, &type, &word);
-        if (err)
-            return err;
+        if (!svs_read_line(input, &type, &word))
+            return false;
+
         switch (type) {
         case 0:                 /* EOF */
-            return SCPE_OK;
+            return true;
         case ':':               /* address */
             addr = (int)word;
             break;
@@ -674,38 +529,38 @@ static t_stat svs_load(CORE *cpu, FILE *input)
             if (addr < 010) {
                 cpu->pult[addr] = word;
             } else {
-                memory[addr] = word << 16;
-                tag[addr] = (type == '*') ? TAG_INSN48 : TAG_NUMBER48;
+                unsigned tag = (type == '*') ? TAG_INSN48 : TAG_NUMBER48;
+                elMasterRamWordWrite(addr, tag, word << 16);
             }
             ++addr;
             break;
         case '@':               /* start address */
-            cpu->PC = (uint32)word;
+            cpu->core.PC = (uint32_t)word;
             break;
         }
-        if (addr > MEMSIZE)
-            return SCPE_FMT;
+        if (addr > SVS_MEMSIZE)
+            return false;
     }
-    return SCPE_OK;
+    return true;
 }
 
 /*
  * Dump memory to file.
  */
-static t_stat svs_dump(CORE *cpu, FILE *of, const char *fnam)
+void svs_dump(struct ElSvsProcessor *cpu, FILE *of, const char *fnam)
 {
     int addr, last_addr = -1;
-    t_value word;
-    uint8 t;
+    ElMasterWord word;
+    ElMasterTag tag;
 
     fprintf(of, "; %s\n", fnam);
-    for (addr=1; addr<MEMSIZE; ++addr) {
+    for (addr=1; addr<SVS_MEMSIZE; ++addr) {
         if (addr < 010) {
             word = cpu->pult[addr];
-            t = TAG_INSN48;
+            tag = TAG_INSN48;
         } else {
-            word = memory[addr] >> 16;
-            t = tag[addr];
+            elMasterRamWordRead(addr, &tag, &word);
+            word >>= 16;
         }
 
         if (word == 0)
@@ -715,9 +570,9 @@ static t_stat svs_dump(CORE *cpu, FILE *of, const char *fnam)
             fprintf(of, "\nв %05o\n", addr);
         }
         last_addr = addr;
-        if (IS_INSN48(t)) {
+        if (IS_INSN48(tag)) {
             fprintf(of, "к ");
-            svs_fprint_cmd(of, (uint32)(word >> 24));
+            svs_fprint_cmd(of, (uint32_t)(word >> 24));
             fprintf(of, ", ");
             svs_fprint_cmd(of, word & BITS(24));
             fprintf(of, "\t\t; %05o - ", addr);
@@ -735,25 +590,4 @@ static t_stat svs_dump(CORE *cpu, FILE *of, const char *fnam)
             fprintf(of, "\t\t; %05o\n", addr);
         }
     }
-    return SCPE_OK;
-}
-
-/*
- * Loader/dumper
- */
-t_stat sim_load(FILE *fi, CONST char *cptr, CONST char *fnam, int dump_flag)
-{
-    CORE *cpu = &cpu_core[0];
-    int index = strtoul(cptr, 0, 0);
-
-    if (index > 0 && index < NUM_CORES) {
-        /* Optional argument to "load" or "dump" command
-         * specifies a target core index. */
-        cpu += index;
-    }
-
-    if (dump_flag)
-        return svs_dump(cpu, fi, fnam);
-
-    return svs_load(cpu, fi);
 }

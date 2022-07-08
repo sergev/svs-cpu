@@ -21,15 +21,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+#include "el_svs_api.h"
+#include "svs_internal.h"
 #include <math.h>
-#include "svs_defs.h"
 
 typedef struct {
-    t_uint64 mantissa;
+    uint64_t mantissa;
     unsigned exponent;                  /* offset by 64 */
 } alureg_t;                             /* ALU register type */
 
-static alureg_t toalu(t_value val)
+static alureg_t toalu(uint64_t val)
 {
     alureg_t ret;
 
@@ -40,7 +41,7 @@ static alureg_t toalu(t_value val)
     return ret;
 }
 
-static int SIM_INLINE is_negative(alureg_t *word)
+static inline int is_negative(alureg_t *word)
 {
     return (word->mantissa & BIT41) != 0;
 }
@@ -63,11 +64,11 @@ static void negate(alureg_t *val)
  * Единица 1-го разряда и нулевое слово -> 48,
  * как в первоначальном варианте системы команд.
  */
-int svs_highest_bit(t_value val)
+int svs_highest_bit(uint64_t val)
 {
     int n = 32, cnt = 0;
     do {
-        t_value tmp = val;
+        uint64_t tmp = val;
         if (tmp >>= n) {
             cnt += n;
             val = tmp;
@@ -81,13 +82,13 @@ int svs_highest_bit(t_value val)
  * Результат помещается в регистры ACC и 40-1 разряды RMR.
  * 48-41 разряды RMR сохраняются.
  */
-static void normalize_and_round(CORE *cpu, alureg_t acc, t_uint64 mr, int rnd_rq)
+static void normalize_and_round(struct ElSvsProcessor *cpu, alureg_t acc, uint64_t mr, int rnd_rq)
 {
-    t_uint64 rr = 0;
+    uint64_t rr = 0;
     int i;
-    t_uint64 r;
+    uint64_t r;
 
-    if (cpu->RAU & RAU_NORM_DISABLE)
+    if (cpu->core.RAU & RAU_NORM_DISABLE)
         goto chk_rnd;
     i = (acc.mantissa >> 39) & 3;
     if (i == 0) {
@@ -146,22 +147,22 @@ chk_zero:
 chk_rnd:
     if (acc.exponent & 0x8000)
         goto zero;
-    if (! (cpu->RAU & RAU_ROUND_DISABLE) && rnd_rq)
+    if (! (cpu->core.RAU & RAU_ROUND_DISABLE) && rnd_rq)
         acc.mantissa |= 1;
 
-    if (! acc.mantissa && ! (cpu->RAU & RAU_NORM_DISABLE)) {
-zero:   cpu->ACC = 0;
-        cpu->RMR &= ~BITS40;
+    if (! acc.mantissa && ! (cpu->core.RAU & RAU_NORM_DISABLE)) {
+zero:   cpu->core.ACC = 0;
+        cpu->core.RMR &= ~BITS40;
         return;
     }
 
-    cpu->ACC = (t_value) (acc.exponent & BITS(7)) << 41 |
+    cpu->core.ACC = (uint64_t) (acc.exponent & BITS(7)) << 41 |
         (acc.mantissa & BITS41);
-    cpu->RMR = (cpu->RMR & ~BITS40) | (mr & BITS40);
+    cpu->core.RMR = (cpu->core.RMR & ~BITS40) | (mr & BITS40);
     /* При переполнении мантисса и младшие разряды порядка верны */
     if (acc.exponent & 0x80) {
-        if (! (cpu->RAU & RAU_OVF_DISABLE))
-            longjmp(cpu->exception, STOP_OVFL);
+        if (! (cpu->core.RAU & RAU_OVF_DISABLE))
+            longjmp(cpu->exception, ESS_OVFL);
     }
 }
 
@@ -170,13 +171,13 @@ zero:   cpu->ACC = 0;
  * Исходные значения: регистр ACC и аргумент 'val'.
  * Результат помещается в регистр ACC и 40-1 разряды RMR.
  */
-void svs_add(CORE *cpu, t_value val, int negate_acc, int negate_val)
+void svs_add(struct ElSvsProcessor *cpu, uint64_t val, int negate_acc, int negate_val)
 {
-    t_uint64 mr;
+    uint64_t mr;
     alureg_t acc, word, a1, a2;
     int diff, neg, rnd_rq = 0;
 
-    acc = toalu(cpu->ACC);
+    acc = toalu(cpu->core.ACC);
     word = toalu(val);
     if (! negate_acc) {
         if (! negate_val) {
@@ -256,7 +257,7 @@ static alureg_t nrdiv(alureg_t n, alureg_t d)
 #define ABS(x) ((x) < 0 ? -x : x)
 #define INT64(x) ((x) & BIT41 ? (0xFFFFFFFFFFFFFFFFLL << 40) | (x) : x)
 
-    t_int64 nn, dd, q, res;
+    int64_t nn, dd, q, res;
     alureg_t quot;
 
     /* to compensate for potential normalization to the right  */
@@ -294,16 +295,16 @@ static alureg_t nrdiv(alureg_t n, alureg_t d)
  * Исходные значения: регистр ACC и аргумент 'val'.
  * Результат помещается в регистр ACC, содержимое RMR не определено.
  */
-void svs_divide(CORE *cpu, t_value val)
+void svs_divide(struct ElSvsProcessor *cpu, uint64_t val)
 {
     alureg_t acc;
     alureg_t dividend, divisor;
 
     if (((val ^ (val << 1)) & BIT41) == 0) {
         /* Ненормализованный делитель: деление на ноль. */
-        longjmp(cpu->exception, STOP_DIVZERO);
+        longjmp(cpu->exception, ESS_DIVZERO);
     }
-    dividend = toalu(cpu->ACC);
+    dividend = toalu(cpu->core.ACC);
     divisor = toalu(val);
 
     acc = nrdiv(dividend, divisor);
@@ -316,21 +317,21 @@ void svs_divide(CORE *cpu, t_value val)
  * Исходные значения: регистр ACC и аргумент 'val'.
  * Результат помещается в регистр ACC и 40-1 разряды RMR.
  */
-void svs_multiply(CORE *cpu, t_value val)
+void svs_multiply(struct ElSvsProcessor *cpu, uint64_t val)
 {
-    uint8 neg = 0;
+    uint8_t neg = 0;
     alureg_t acc, word, a, b;
-    t_uint64 mr, alo, blo, ahi, bhi;
+    uint64_t mr, alo, blo, ahi, bhi;
 
-    register t_uint64 l;
+    register uint64_t l;
 
-    if (! cpu->ACC || ! val) {
+    if (! cpu->core.ACC || ! val) {
         /* multiplication by zero is zero */
-        cpu->ACC = 0;
-        cpu->RMR &= ~BITS40;
+        cpu->core.ACC = 0;
+        cpu->core.RMR &= ~BITS40;
         return;
     }
-    acc = toalu(cpu->ACC);
+    acc = toalu(cpu->core.ACC);
     word = toalu(val);
 
     a = acc;
@@ -374,14 +375,14 @@ void svs_multiply(CORE *cpu, t_value val)
  * Изменение знака числа на сумматоре ACC.
  * Результат помещается в регистр ACC, RMR гасится.
  */
-void svs_change_sign(CORE *cpu, int negate_acc)
+void svs_change_sign(struct ElSvsProcessor *cpu, int negate_acc)
 {
     alureg_t acc;
 
-    acc = toalu(cpu->ACC);
+    acc = toalu(cpu->core.ACC);
     if (negate_acc)
         negate(&acc);
-    cpu->RMR = 0;
+    cpu->core.RMR = 0;
     normalize_and_round(cpu, acc, 0, 0);
 }
 
@@ -389,22 +390,22 @@ void svs_change_sign(CORE *cpu, int negate_acc)
  * Изменение порядка числа на сумматоре ACC.
  * Результат помещается в регистр ACC, RMR гасится.
  */
-void svs_add_exponent(CORE *cpu, int val)
+void svs_add_exponent(struct ElSvsProcessor *cpu, int val)
 {
     alureg_t acc;
 
-    acc = toalu(cpu->ACC);
+    acc = toalu(cpu->core.ACC);
     acc.exponent += val;
-    cpu->RMR = 0;
+    cpu->core.RMR = 0;
     normalize_and_round(cpu, acc, 0, 0);
 }
 
 /*
  * Сборка значения по маске.
  */
-t_value svs_pack(t_value val, t_value mask)
+uint64_t svs_pack(uint64_t val, uint64_t mask)
 {
-    t_value result;
+    uint64_t result;
 
     result = 0;
     for (; mask; mask>>=1, val>>=1)
@@ -419,9 +420,9 @@ t_value svs_pack(t_value val, t_value mask)
 /*
  * Разборка значения по маске.
  */
-t_value svs_unpack(t_value val, t_value mask)
+uint64_t svs_unpack(uint64_t val, uint64_t mask)
 {
-    t_value result;
+    uint64_t result;
     int i;
 
     result = 0;
@@ -440,7 +441,7 @@ t_value svs_unpack(t_value val, t_value mask)
 /*
  * Подсчёт количества единиц в слове.
  */
-int svs_count_ones(t_value word)
+int svs_count_ones(uint64_t word)
 {
     int c;
 
@@ -453,27 +454,27 @@ int svs_count_ones(t_value word)
  * Сдвиг сумматора ACC с выдвижением в регистр младших разрядов RMR.
  * Величина сдвига находится в диапазоне -64..63.
  */
-void svs_shift(CORE *cpu, int i)
+void svs_shift(struct ElSvsProcessor *cpu, int i)
 {
-    cpu->RMR = 0;
+    cpu->core.RMR = 0;
     if (i > 0) {
         /* Сдвиг вправо. */
         if (i < 48) {
-            cpu->RMR = (cpu->ACC << (48-i)) & BITS48;
-            cpu->ACC >>= i;
+            cpu->core.RMR = (cpu->core.ACC << (48-i)) & BITS48;
+            cpu->core.ACC >>= i;
         } else {
-            cpu->RMR = cpu->ACC >> (i-48);
-            cpu->ACC = 0;
+            cpu->core.RMR = cpu->core.ACC >> (i-48);
+            cpu->core.ACC = 0;
         }
     } else if (i < 0) {
         /* Сдвиг влево. */
         i = -i;
         if (i < 48) {
-            cpu->RMR = cpu->ACC >> (48-i);
-            cpu->ACC = (cpu->ACC << i) & BITS48;
+            cpu->core.RMR = cpu->core.ACC >> (48-i);
+            cpu->core.ACC = (cpu->core.ACC << i) & BITS48;
         } else {
-            cpu->RMR = (cpu->ACC << (i-48)) & BITS48;
-            cpu->ACC = 0;
+            cpu->core.RMR = (cpu->core.ACC << (i-48)) & BITS48;
+            cpu->core.ACC = 0;
         }
     }
 }

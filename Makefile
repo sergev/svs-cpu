@@ -1,5 +1,10 @@
-PROG            = ifcomp unit_tests
-CFLAGS		= -g -O3 -Wall -Werror
+PROG            = libsvs.a unit_tests
+OBJ             = svs_cpu.o \
+                  svs_arith.o \
+                  svs_trace.o \
+                  svs_util.o \
+                  svs_mmu.o
+CFLAGS		= -std=c11 -g -O -Wall -Werror
 LDFLAGS         = -g
 LIBCMOCKA       = -lcmocka
 
@@ -22,10 +27,10 @@ test:           unit_tests
 		./unit_tests
 
 clean:
-		rm -f $(PROG) *.o *.input *.output
+		rm -f $(PROG) *.o *.a *.input *.output
 
-ifcomp:         main.o ifcomp.o
-		$(CC) $(LDFLAGS) main.o ifcomp.o -o $@
+libsvs.a:       $(OBJ)
+		$(AR) rc $@ $(OBJ)
 
-unit_tests:     unit_tests.o ifcomp.o
-		$(CC) $(LDFLAGS) unit_tests.o ifcomp.o $(LIBCMOCKA) -o $@
+unit_tests:     unit_tests.o libsvs.a
+		$(CC) $(LDFLAGS) unit_tests.o libsvs.a $(LIBCMOCKA) -o $@
