@@ -1,13 +1,10 @@
-#include <setjmp.h>
-#include <stdarg.h>
-#include <stddef.h>
-#include <cmocka.h>
-#include <stdio.h>
+//
+// Unit tests for SVS processor.
+// Using the CinyTest framework.
+// For details, see: https://github.com/drmonkeysee/CinyTest
+//
 #include <stdlib.h>
-#include <string.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <inttypes.h>
+#include "cinytest/ciny.h"
 #include "el_master_api.h"
 #include "el_svs_api.h"
 
@@ -26,8 +23,7 @@ ElMasterStatus elMasterRamWordRead(
     ElMasterTag *pTag,
     ElMasterWord *pWord)
 {
-    if (address >= 1024*1024)
-        fail();
+    ct_asserttrue(address < 1024*1024);
 
     *pWord = memory[address];
     *pTag = mem_tag[address];
@@ -43,8 +39,7 @@ ElMasterStatus elMasterRamWordWrite(
     ElMasterTag tag,
     ElMasterWord word)
 {
-    if (address >= 1024*1024)
-        fail();
+    ct_asserttrue(address < 1024*1024);
 
     memory[address] = word;
     mem_tag[address] = tag;
@@ -57,16 +52,32 @@ ElMasterStatus elMasterRamWordWrite(
 void exit(int status)
 {
     for (;;)
-        fail();
+        ct_assertfail();
 }
 
 //
-// UJ instruction (ПБ).
+// Setup for every test: instantiate the processor.
 //
-static void uj(void **unused)
+static void setup(void **pcontext)
 {
-    // Instantiate the processor.
-    struct ElSvsProcessor *cpu = ElSvsAllocate(0);
+    *pcontext = ElSvsAllocate(0);
+}
+
+//
+// Teardown for every test: deallocate the processor.
+//
+static void teardown(void **pcontext)
+{
+    free(*pcontext);
+    *pcontext = NULL;
+}
+
+//
+// Test: UJ instruction (ПБ).
+//
+static void uj(void *context)
+{
+    struct ElSvsProcessor *cpu = context;
 
     // Store a test code.
     ElSvsStoreInstruction(cpu, 1, 000, 0300, 000003, 000, 0220, 000000);    // 1: пб 3
@@ -75,21 +86,25 @@ static void uj(void **unused)
 
     // Run the code, starting at address 1.
     ElSvsSetPC(cpu, 1);
-    ElSvsStatus status = ElSvsSimulate(cpu);
-    assert_int_equal(status, ESS_HALT);
+    int status = ElSvsSimulate(cpu);
+    ct_assertequal(status, ESS_HALT);
 
     // Check the PC address.
-    assert_int_equal(ElSvsGetPC(cpu), 3);
-    free((void*)cpu);
+    ct_assertequal(ElSvsGetPC(cpu), 3u);
 }
 
 //
 // Run all tests.
 //
-int main()
+int main(int argc, char *argv[])
 {
-    const struct CMUnitTest tests[] = {
-        cmocka_unit_test(uj),
+    // List of all tests.
+    const struct ct_testcase tests[] = {
+        ct_maketest(uj),
     };
-    return cmocka_run_group_tests(tests, NULL, NULL);
+    const struct ct_testsuite suite = ct_makesuite_setup_teardown(tests, setup, teardown);
+
+    const size_t results = ct_runsuite_withargs(&suite, argc, argv);
+
+    return results != 0;
 }

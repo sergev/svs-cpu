@@ -3,17 +3,11 @@ for the project of the full scale SVS simulator.
 
 The CPU implementation was borrowed from the SIMH project: https://github.com/besm6/simh
 
+For unit tests, the CinyTest framework is used.
+
 # Build
 
-On Mac:
 ```
-$ brew install cmocka
-$ make
-```
-
-On Ubuntu:
-```
-$ sudo apt install libcmocka-dev
 $ make
 ```
 
