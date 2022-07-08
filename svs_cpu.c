@@ -79,17 +79,8 @@ void ElSvsStoreData(struct ElSvsProcessor *cpu, unsigned addr, uint64_t val)
 /*
  * Write an instruction word to memory.
  */
-void ElSvsStoreInstruction(struct ElSvsProcessor *cpu, unsigned addr,
-    unsigned reg_left, unsigned op_left, unsigned addr_left,
-    unsigned reg_right, unsigned op_right, unsigned addr_right)
+void ElSvsStoreInstruction(struct ElSvsProcessor *cpu, unsigned addr, uint64_t val)
 {
-    uint64_t val = ((uint64_t)reg_left << (20+24)) |
-                   ((uint64_t)op_left << (12+24)) |
-                   (addr_left << 24) |
-                   (reg_right << 20) |
-                   (op_right << 12) |
-                   addr_right;
-
     if (addr < 010) {
         /* Deposited values for the switch register address range
          * always go to switch registers. */
@@ -148,12 +139,22 @@ void ElSvsSetPC(struct ElSvsProcessor *cpu, unsigned val)
     cpu->core.PC = val;
 }
 
+void ElSvsSetM(struct ElSvsProcessor *cpu, unsigned index, unsigned val)
+{
+    cpu->core.M[index] = val;
+}
+
 /*
  * Get register value.
  */
 unsigned ElSvsGetPC(struct ElSvsProcessor *cpu)
 {
     return cpu->core.PC;
+}
+
+unsigned ElSvsGetM(struct ElSvsProcessor *cpu, unsigned index)
+{
+    return cpu->core.M[index];
 }
 
 /*
@@ -217,7 +218,7 @@ struct ElSvsProcessor *ElSvsAllocate(int cpu_index)
         abort();
     }
     cpu_reset(cpu, cpu_index);
-    //cpu_set_trace(cpu);
+    cpu_set_trace(cpu);
     return cpu;
 }
 

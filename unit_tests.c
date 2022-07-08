@@ -79,18 +79,64 @@ static void uj(void *context)
 {
     struct ElSvsProcessor *cpu = context;
 
-    // Store a test code.
-    ElSvsStoreInstruction(cpu, 1, 000, 0300, 000003, 000, 0220, 000000);    // 1: пб 3
-    ElSvsStoreInstruction(cpu, 2, 002, 0330, 076543, 000, 0220, 000000);    // 2: стоп '76543'(2) -- fail
-    ElSvsStoreInstruction(cpu, 3, 006, 0330, 012345, 000, 0220, 000000);    // 3: стоп '12345'(6) -- pass
+    // Store the test code.
+    //
+    //  start   старт   '10'
+    //          пб      pass
+    //  fail    стоп    '76543'(2)
+    //  pass    стоп    '12345'(6)
+    //
+    ElSvsStoreInstruction(cpu, 010, ElSvsAsm("00 30 00012, 00 22 00000"));
+    ElSvsStoreInstruction(cpu, 011, ElSvsAsm("02 33 76543, 00 22 00000"));
+    ElSvsStoreInstruction(cpu, 012, ElSvsAsm("06 33 12345, 00 22 00000"));
 
-    // Run the code, starting at address 1.
-    ElSvsSetPC(cpu, 1);
+    // Run the code.
+    ElSvsSetPC(cpu, 010);
     int status = ElSvsSimulate(cpu);
     ct_assertequal(status, ESS_HALT);
 
     // Check the PC address.
-    ct_assertequal(ElSvsGetPC(cpu), 3u);
+    ct_assertequal(ElSvsGetPC(cpu), 012u);
+}
+
+//
+// Test: VTM, VZM, V1M instructions (УИА, ПИО, ПИНО).
+//
+static void vtm_vzm_v1m(void *context)
+{
+    struct ElSvsProcessor *cpu = context;
+
+    // Store the test code.
+    //
+    //  start   старт   '10'
+    //          уиа     0(2)
+    //          пио     ok(2)
+    //          пб      fail
+    //  ok      пино    fail(2)
+    //          пино    fail(2)
+    //          уиа     -1(2)
+    //          пио     fail(2)
+    //          пио     fail(2)
+    //          пино    pass(2)
+    //  fail    стоп    '76543'(2)
+    //  pass    стоп    '12345'(6)
+    //
+    ElSvsStoreInstruction(cpu, 010, ElSvsAsm("уиа (2), пио 12(2)"));
+    ElSvsStoreInstruction(cpu, 011, ElSvsAsm("пб 15, мода"));
+    ElSvsStoreInstruction(cpu, 012, ElSvsAsm("пино 15(2), пино 15(2)"));
+    ElSvsStoreInstruction(cpu, 013, ElSvsAsm("уиа -1(2), пио 15(2)"));
+    ElSvsStoreInstruction(cpu, 014, ElSvsAsm("пио 15(2), пино 16(2)"));
+    ElSvsStoreInstruction(cpu, 015, ElSvsAsm("стоп 76543(2), мода")); // Magic opcode: Fail
+    ElSvsStoreInstruction(cpu, 016, ElSvsAsm("стоп 12345(6), мода")); // Magic opcode: Pass
+
+    // Run the code.
+    ElSvsSetPC(cpu, 010);
+    int status = ElSvsSimulate(cpu);
+    ct_assertequal(status, ESS_HALT);
+
+    // Check the registers.
+    ct_assertequal(ElSvsGetPC(cpu), 016u);
+    ct_assertequal(ElSvsGetM(cpu, 2), 077777u);
 }
 
 //
@@ -101,9 +147,11 @@ int main(int argc, char *argv[])
     // List of all tests.
     const struct ct_testcase tests[] = {
         ct_maketest(uj),
+        ct_maketest(vtm_vzm_v1m),
     };
     const struct ct_testsuite suite = ct_makesuite_setup_teardown(tests, setup, teardown);
 
+    setenv("CINYTEST_SUPPRESS_OUTPUT", "no", 0);
     const size_t results = ct_runsuite_withargs(&suite, argc, argv);
 
     return results != 0;

@@ -1,0 +1,16 @@
+*
+* Test for instructions VTM, VZM, V1M
+*
+start   старт   '10'
+        уиа     0(2)
+        пио     ok(2)
+        пб      fail
+ok      пино    fail(2)
+        пино    fail(2)
+        уиа     -1(2)
+        пио     fail(2)
+        пио     fail(2)
+        пино    pass(2)
+fail    стоп    '76543'(2)
+pass    стоп    '12345'(6)
+        финиш

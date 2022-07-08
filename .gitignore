@@ -2,3 +2,6 @@
 *.a
 *.dSYM/
 unit_tests
+*.b6
+*.dump
+*.lst

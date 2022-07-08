@@ -68,6 +68,18 @@ struct ElSvsProcessor *ElSvsAllocate(int cpu_index);
 ElSvsStatus ElSvsSimulate(struct ElSvsProcessor *cpu);
 
 /*
+ * Set register value.
+ */
+void ElSvsSetPC(struct ElSvsProcessor *cpu, unsigned val);
+void ElSvsSetM(struct ElSvsProcessor *cpu, unsigned index, unsigned val);
+
+/*
+ * Get register value.
+ */
+unsigned ElSvsGetPC(struct ElSvsProcessor *cpu);
+unsigned ElSvsGetM(struct ElSvsProcessor *cpu, unsigned index);
+
+/*
  * Write a data word to memory.
  */
 void ElSvsStoreData(struct ElSvsProcessor *cpu, unsigned addr, uint64_t val);
@@ -75,18 +87,11 @@ void ElSvsStoreData(struct ElSvsProcessor *cpu, unsigned addr, uint64_t val);
 /*
  * Write an instruction word to memory.
  */
-void ElSvsStoreInstruction(struct ElSvsProcessor *cpu, unsigned addr,
-    unsigned reg_left, unsigned op_left, unsigned addr_left,
-    unsigned reg_right, unsigned op_right, unsigned addr_right);
+void ElSvsStoreInstruction(struct ElSvsProcessor *cpu, unsigned addr, uint64_t val);
 
 /*
- * Set register value.
+ * Convert assembly source code into binary word.
  */
-void ElSvsSetPC(struct ElSvsProcessor *cpu, unsigned val);
-
-/*
- * Get register value.
- */
-unsigned ElSvsGetPC(struct ElSvsProcessor *cpu);
+uint64_t ElSvsAsm(const char *source);
 
 #endif // __EL_SVS_API_H

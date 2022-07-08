@@ -389,39 +389,18 @@ void svs_fprint_insn(FILE *of, uint32_t insn)
 }
 
 /*
- * Symbolic input
- *
- * Inputs:
- *      *cptr   = pointer to input string
- *      addr    = current PC
- *      *uptr   = pointer to unit
- *      *val    = pointer to output values
- *      sw      = switches
- * Outputs:
- *      status  = error status
+ * Convert assembly source code into binary word.
  */
-#if 0
-bool parse_sym(const char *cptr, t_addr addr, UNIT *uptr, uint64_t *val, int32_t sw)
+uint64_t ElSvsAsm(const char *src)
 {
-    int32_t i;
+    uint64_t val;
 
-    if (parse_instruction_word(cptr, val))          /* symbolic parse? */
-        return true;
-
-    val[0] = 0;
-    for (i=0; i<16; i++) {
-        if (*cptr < '0' || *cptr > '7')
-            break;
-        val[0] = (val[0] << 3) | (*cptr - '0');
-        cptr = skip_spaces(cptr+1);                 /* next char */
+    if (!parse_instruction_word(src, &val)) {
+        printf("ElSvsAsm: bad source: %s\n", src);
+        exit(1);
     }
-    if (*cptr != 0 && *cptr != ';' && *cptr != '\n' && *cptr != '\r') {
-        /*printf("Extra symbols at eoln: %s\n", cptr);*/
-        return false;
-    }
-    return true;
+    return val;
 }
-#endif
 
 /*
  * Чтение строки входного файла.
