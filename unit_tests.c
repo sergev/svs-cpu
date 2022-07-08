@@ -261,9 +261,55 @@ static void vlm(void *context)
     ct_assertequal(ElSvsGetM(cpu, 15), 0u);
 }
 
+//
+// Test: UTC, WTC instructions (МОДА, МОД).
+//
 static void utc_wtc(void *context)
 {
+    struct ElSvsProcessor *cpu = context;
+
+    // Store the test code.
+    ElSvsStoreInstruction(cpu, 010, ElSvsAsm("мода -1, уиа (3)"));
+    ElSvsStoreInstruction(cpu, 011, ElSvsAsm("пио 40(3), слиа 1(3)"));
+    ElSvsStoreInstruction(cpu, 012, ElSvsAsm("пино 40(3), мода"));
+    ElSvsStoreInstruction(cpu, 013, ElSvsAsm("мода -1, мода"));
+    ElSvsStoreInstruction(cpu, 014, ElSvsAsm("уиа (3), пио 40(3)"));
+    ElSvsStoreInstruction(cpu, 015, ElSvsAsm("слиа 1(3), пино 40(3)"));
+    ElSvsStoreInstruction(cpu, 016, ElSvsAsm("мод 2000, уиа (3)"));
+    ElSvsStoreInstruction(cpu, 017, ElSvsAsm("пио 40(3), слиа 1(3)"));
+    ElSvsStoreInstruction(cpu, 020, ElSvsAsm("пино 40(3), мод 2000"));
+    ElSvsStoreInstruction(cpu, 021, ElSvsAsm("уиа (3), пио 40(3)"));
+    ElSvsStoreInstruction(cpu, 022, ElSvsAsm("слиа 1(3), пино 40(3)"));
+    ElSvsStoreInstruction(cpu, 023, ElSvsAsm("мода -7, мода 10"));
+    ElSvsStoreInstruction(cpu, 024, ElSvsAsm("уиа -2(3), пио 40(3)"));
+    ElSvsStoreInstruction(cpu, 025, ElSvsAsm("слиа 1(3), пино 40(3)"));
+    ElSvsStoreInstruction(cpu, 026, ElSvsAsm("мод 2000, мода 10"));
+    ElSvsStoreInstruction(cpu, 027, ElSvsAsm("уиа -6(3), слиа -1(3)"));
+    ElSvsStoreInstruction(cpu, 030, ElSvsAsm("пино 40(3), уиа -1(3)"));
+    ElSvsStoreInstruction(cpu, 031, ElSvsAsm("мод 2002(3), уиа (4)"));
+    ElSvsStoreInstruction(cpu, 032, ElSvsAsm("уии 5(4), слиа 52526(5)"));
+    ElSvsStoreInstruction(cpu, 033, ElSvsAsm("пино 40(5), слиа 1(3)"));
+    ElSvsStoreInstruction(cpu, 034, ElSvsAsm("мод 2002(3), уиа (4)"));
+    ElSvsStoreInstruction(cpu, 035, ElSvsAsm("уии 5(4), слиа 25253(5)"));
+    ElSvsStoreInstruction(cpu, 036, ElSvsAsm("пино 40(5), мода"));
+    ElSvsStoreInstruction(cpu, 037, ElSvsAsm("стоп 12345(6), мода")); // Magic opcode: Pass
+    ElSvsStoreInstruction(cpu, 040, ElSvsAsm("стоп 76543(2), мода")); // Magic opcode: Fail
+    ElSvsStoreData(cpu, 02000, 00000000000077777ul);
+    ElSvsStoreData(cpu, 02001, 05252525252525252ul);
+    ElSvsStoreData(cpu, 02002, 02525252525252525ul);
+
+    // Run the code.
+    ElSvsSetPC(cpu, 010);
+    int status = ElSvsSimulate(cpu);
+    ct_assertequal(status, ESS_HALT);
+
+    // Check registers.
+    ct_assertequal(ElSvsGetPC(cpu), 037u);
+    ct_assertequal(ElSvsGetM(cpu, 3), 0u);
+    ct_assertequal(ElSvsGetM(cpu, 4), 052525u);
+    ct_assertequal(ElSvsGetM(cpu, 5), 0u);
 }
+
 static void vjm(void *context)
 {
 }
