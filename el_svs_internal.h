@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <setjmp.h>
 #include <inttypes.h>
+#include <stdbool.h>
 
 //
 // Memory.
@@ -61,16 +62,6 @@
 #define IS_INSN48(t)    ((t) == TAG_INSN48)
 
 #define IS_48BIT(t)     ((t) == TAG_INSN48 || (t) == TAG_NUMBER48)
-
-//
-// Четыре режима трассировки.
-//
-enum {
-    TRACE_NONE = 0,
-    TRACE_EXTRACODES,       // только экстракоды (кроме э75)
-    TRACE_INSTRUCTIONS,     // только команды процессора
-    TRACE_ALL,              // команды, регистры и обращения к памяти
-};
 
 //
 // Внутреннее состояние процессора.
@@ -113,17 +104,22 @@ struct ElSvsProcessor {
     // Предыдущее состояние, для трассировки.
     struct ElSvsCoreState prev;
 
-    int index;              // номер процессора 0...3
-    uint64_t pult[8];       // тумблерные регистры
-    uint32_t RK, Aex;       // регистр команд, исполнительный адрес
-    uint32_t UTLB[32];      // регистры приписки постранично, пользователя
-    uint32_t STLB[32];      // регистры приписки постранично, супервизора
-    jmp_buf exception;      // прерывание
-    int corr_stack;         // коррекция стека при прерывании
+    int index;                  // номер процессора 0...3
+    uint64_t pult[8];           // тумблерные регистры
+    uint32_t RK, Aex;           // регистр команд, исполнительный адрес
+    uint32_t UTLB[32];          // регистры приписки постранично, пользователя
+    uint32_t STLB[32];          // регистры приписки постранично, супервизора
+    jmp_buf exception;          // прерывание
+    int corr_stack;             // коррекция стека при прерывании
 
-    int debug_mode;         // режим отладки
-    int trace_mode;         // режим трассировки
-    FILE *log_output;       // файл для вывода трассировки
+    // Режимы трассировки.
+    bool trace_instructions;    // трассировка выполняемых машинных команд
+    bool trace_extracodes;      // трассировка экстракодов (кроме э75)
+    bool trace_fetch;           // трассировка выборки команд из памяти
+    bool trace_memory;          // трассировка чтения и записи памяти
+    bool trace_exceptions;      // трассировка исключительных ситуаций
+    bool trace_registers;       // трассировка регистров
+    FILE *log_output;           // файл для вывода трассировки, или stdout
 
 #if 0
     int mpd_data;           // данные для передачи в МПД

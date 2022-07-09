@@ -15,7 +15,7 @@ test:           unit_tests
 		./unit_tests
 
 clean:
-		rm -f $(PROG) *.o *.a cinytest/*.o
+		rm -f $(PROG) *.o *.a cinytest/*.o *.output
 
 unit_tests:     unit_tests.o libsvs.a libtest.a
 		$(CC) $(LDFLAGS) unit_tests.o libsvs.a libtest.a -o $@

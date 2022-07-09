@@ -5,3 +5,4 @@ unit_tests
 *.b6
 *.dump
 *.lst
+*.output

@@ -34,7 +34,7 @@ static void mmu_protection_check(struct ElSvsProcessor *cpu, int vaddr)
     /* Защита не заблокирована, а лист закрыт */
     if (! tmp_prot_disabled && (cpu->core.RZ & (1 << (vaddr >> 10)))) {
         cpu->core.bad_addr = vaddr >> 10;
-        if (cpu->debug_mode)
+        if (cpu->trace_exceptions)
             printf("--- (%05o) защита числа", vaddr);
         longjmp(cpu->exception, ESS_OPERAND_PROT);
     }
@@ -79,7 +79,7 @@ static int mmu_store_with_tag(struct ElSvsProcessor *cpu, int vaddr, uint64_t va
         /* Приписка отключена. */
         if (vaddr < 010) {
             /* Игнорируем запись в тумблерные регистры. */
-            if (cpu->trace_mode >= TRACE_INSTRUCTIONS) {
+            if (cpu->trace_instructions | cpu->trace_memory | cpu->trace_registers) {
                 fprintf(cpu->log_output, "cpu%d --- Ignore write to pult register %d\n",
                     cpu->index, vaddr);
             }
@@ -120,7 +120,7 @@ void mmu_store(struct ElSvsProcessor *cpu, int vaddr, uint64_t val)
 
     int paddr = mmu_store_with_tag(cpu, vaddr, val << 16, t);
 
-    if (paddr != 0 && cpu->trace_mode >= TRACE_ALL) {
+    if (paddr != 0 && cpu->trace_memory) {
         fprintf(cpu->log_output, "cpu%d       Memory Write [%05o %07o] = %02o:",
             cpu->index, vaddr, paddr, t);
         svs_fprint_48bits(cpu->log_output, val);
@@ -135,7 +135,7 @@ void mmu_store64(struct ElSvsProcessor *cpu, int vaddr, uint64_t val64)
 {
     int paddr = mmu_store_with_tag(cpu, vaddr, val64, cpu->core.TagR);
 
-    if (paddr != 0 && cpu->trace_mode >= TRACE_ALL) {
+    if (paddr != 0 && cpu->trace_memory) {
         fprintf(cpu->log_output, "cpu%d       Memory Write [%05o %07o] = %02o:",
             cpu->index, vaddr, paddr, cpu->core.TagR);
         fprintf(cpu->log_output, "%04o %04o %04o %04o:%02o %04o\n",
@@ -203,7 +203,7 @@ uint64_t mmu_load64(struct ElSvsProcessor *cpu, int vaddr, int tag_check)
     uint8_t t;
     int paddr = mmu_load_with_tag(cpu, vaddr, &val64, &t);
 
-    if (paddr != 0 && cpu->trace_mode >= TRACE_ALL) {
+    if (paddr != 0 && cpu->trace_memory) {
         if (paddr < 010)
             fprintf(cpu->log_output, "cpu%d       Read  TR%o = ", cpu->index, paddr);
         else
@@ -239,7 +239,7 @@ uint64_t mmu_load(struct ElSvsProcessor *cpu, int vaddr)
     int paddr = mmu_load_with_tag(cpu, vaddr, &val, &t);
 
     val >>= 16;
-    if (paddr != 0 && cpu->trace_mode >= TRACE_ALL) {
+    if (paddr != 0 && cpu->trace_memory) {
         if (paddr < 010)
             fprintf(cpu->log_output, "cpu%d       Read  TR%o = ", cpu->index, paddr);
         else
@@ -272,7 +272,7 @@ static void mmu_fetch_check(struct ElSvsProcessor *cpu, int vaddr)
          */
         if (page == 0) {
             cpu->core.bad_addr = vaddr >> 10;
-            if (cpu->debug_mode)
+            if (cpu->trace_exceptions)
                 printf("--- (%05o) защита команды", vaddr);
             longjmp(cpu->exception, ESS_INSN_PROT);
         }
@@ -288,7 +288,7 @@ uint64_t mmu_fetch(struct ElSvsProcessor *cpu, int vaddr, int *paddrp)
     uint8_t t;
 
     if (vaddr == 0) {
-        if (cpu->debug_mode)
+        if (cpu->trace_exceptions)
             printf("--- передача управления на 0");
         longjmp(cpu->exception, ESS_INSN_CHECK);
     }
@@ -313,10 +313,8 @@ uint64_t mmu_fetch(struct ElSvsProcessor *cpu, int vaddr, int *paddrp)
         t = TAG_INSN48;
     }
 
-    if (cpu->trace_mode >= TRACE_INSTRUCTIONS && cpu->debug_mode &&
-        ! (cpu->core.RUU & RUU_RIGHT_INSTR)) {
-        // When both trace and cpu debug enabled,
-        // print the fetch information.
+    if (cpu->trace_fetch && !(cpu->core.RUU & RUU_RIGHT_INSTR)) {
+        // Print the fetch information.
         fprintf(cpu->log_output, "cpu%d       Fetch [%05o %07o] = %o:",
             cpu->index, vaddr, paddr, t);
         svs_fprint_insn(cpu->log_output, (val >> 24) & BITS(24));

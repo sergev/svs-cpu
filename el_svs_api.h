@@ -68,6 +68,18 @@ struct ElSvsProcessor *ElSvsAllocate(int cpu_index);
 ElSvsStatus ElSvsSimulate(struct ElSvsProcessor *cpu);
 
 /*
+ * Enable/disable tracing.
+ * The mode string can have the following options:
+ * i - trace execution of cpu instructions
+ * e - trace extracodes only (except э75)
+ * f - trace instruction fetch from memory
+ * m - trace data load and store from/to memory
+ * x - trace exceptions
+ * r - trace hw registers
+ */
+void ElSvsSetTrace(struct ElSvsProcessor *cpu, const char *trace_mode, const char *filename);
+
+/*
  * Set register value.
  */
 void ElSvsSetPC(struct ElSvsProcessor *cpu, unsigned val);

@@ -125,7 +125,8 @@ void cpu_reset(struct ElSvsProcessor *cpu, unsigned cpu_index)
 
     cpu->core.PC = 1;
 
-    if (cpu->trace_mode) {
+    if (cpu->trace_instructions | cpu->trace_extracodes | cpu->trace_fetch |
+        cpu->trace_memory | cpu->trace_exceptions | cpu->trace_registers) {
         fprintf(cpu->log_output, "cpu%d --- Reset\n", cpu->index);
     }
     //TODO: mpd_reset(cpu);
@@ -177,48 +178,59 @@ unsigned ElSvsGetRAU(struct ElSvsProcessor *cpu)
  */
 void cpu_req(struct ElSvsProcessor *cpu)
 {
-    if (cpu->trace_mode) {
+    if (cpu->trace_instructions | cpu->trace_extracodes | cpu->trace_fetch |
+        cpu->trace_memory | cpu->trace_exceptions | cpu->trace_registers) {
         fprintf(cpu->log_output, "cpu%d --- Request from control panel\n", cpu->index);
     }
     cpu->core.GRVP |= GRVP_PANEL_REQ;
 }
 
 /*
- * Trace instructions, registers and memory access.
+ * Enable/disable tracing.
  */
-void cpu_set_trace(struct ElSvsProcessor *cpu)
+void ElSvsSetTrace(struct ElSvsProcessor *cpu, const char *trace_mode, const char *filename)
 {
-    cpu->trace_mode = TRACE_ALL;
-    if (!cpu->log_output)
+    if (cpu->log_output != stdout) {
+        // Close previous log file.
+        fclose(cpu->log_output);
         cpu->log_output = stdout;
-}
+    }
 
-/*
- * Trace extracodes, except e75.
- */
-void cpu_set_etrace(struct ElSvsProcessor *cpu)
-{
-    cpu->trace_mode = TRACE_EXTRACODES;
-    if (!cpu->log_output)
-        cpu->log_output = stdout;
-}
+    // Disable all trace options.
+    cpu->trace_instructions = false;
+    cpu->trace_extracodes = false;
+    cpu->trace_fetch = false;
+    cpu->trace_memory = false;
+    cpu->trace_exceptions = false;
+    cpu->trace_registers = false;
 
-/*
- * Trace instructions only.
- */
-void cpu_set_itrace(struct ElSvsProcessor *cpu)
-{
-    cpu->trace_mode = TRACE_INSTRUCTIONS;
-    if (!cpu->log_output)
-        cpu->log_output = stdout;
-}
+    if (trace_mode && trace_mode[0]) {
+        // Parse the mode string and enable all requested trace flags.
+        int i;
+        for (i = 0; trace_mode[i]; i++) {
+            switch (trace_mode[i]) {
+            case 'i': cpu->trace_instructions = true; break;
+            case 'e': cpu->trace_extracodes = true; break;
+            case 'f': cpu->trace_fetch = true; break;
+            case 'm': cpu->trace_memory = true; break;
+            case 'x': cpu->trace_exceptions = true; break;
+            case 'r': cpu->trace_registers = true; break;
+            default:
+                fprintf(stderr, "Wrong trace option: %c\n", trace_mode[i]);
+                exit(1);
+            }
+        }
 
-/*
- * Disable tracing.
- */
-void cpu_clr_trace(struct ElSvsProcessor *cpu)
-{
-    cpu->trace_mode = TRACE_NONE;
+        if (filename && filename[0]) {
+            // Open new log file.
+            cpu->log_output = fopen(filename, "a");
+            if (!cpu->log_output) {
+                perror(filename);
+                exit(1);
+            }
+            setlinebuf(cpu->log_output);
+        }
+    }
 }
 
 /*
@@ -233,7 +245,7 @@ struct ElSvsProcessor *ElSvsAllocate(int cpu_index)
         abort();
     }
     cpu_reset(cpu, cpu_index);
-    cpu_set_trace(cpu);
+    cpu->log_output = stdout;
     return cpu;
 }
 
@@ -272,91 +284,91 @@ static void cmd_002(struct ElSvsProcessor *cpu)
     case 020: case 021: case 022: case 023:
     case 024: case 025: case 026: case 027:
         /* Запись в регистры приписки режима пользователя */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Установка приписки пользователя\n", cpu->index);
         mmu_set_rp(cpu, cpu->Aex & 7, cpu->core.ACC, 0);
         break;
 
     case 030: case 031: case 032: case 033:
         /* Запись в регистры защиты */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Запись в регистр защиты\n", cpu->index);
         mmu_set_protection(cpu, cpu->Aex & 3, cpu->core.ACC);
         break;
 
     case 034:
         /* Запись в регистр конфигурации оперативной памяти */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Запись конфигурации оперативной памяти\n", cpu->index);
         /* игнорируем */
         break;
 
     case 035:
         /* Запись в сигнал контроля оперативной памяти */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Запись в сигнал контроля оперативной памяти\n", cpu->index);
         /* игнорируем */
         break;
 
     case 0235:
         /* Чтение сигнала контроля от оперативной памяти */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Чтение сигнала контроля оперативной памяти\n", cpu->index);
         cpu->core.ACC = 0;
         break;
 
     case 0236:
         /* Считывание сигналов запрета запроса в МОП от коммутаторов памяти */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Чтение ЗЗ\n", cpu->index);
         cpu->core.ACC = 0; /* не используем */
         break;
 
     case 037:
         /* Гашение регистра внутренних прерываний */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Гашение РПР\n", cpu->index);
         cpu->core.RPR &= cpu->core.ACC | RPR_WIRED_BITS;
         break;
 
     case 0237:
         /* Чтение главного регистра прерываний */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Чтение ГРП\n", cpu->index);
         cpu->core.ACC = cpu->core.RPR;
         break;
 
     case 044:
         /* Запись в регистр тега */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Установка тега\n", cpu->index);
         cpu->core.TagR = cpu->core.ACC;
         break;
 
     case 0244:
         /* Чтение регистра тега */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Чтение регистра тега\n", cpu->index);
         cpu->core.ACC = cpu->core.TagR;
         break;
 
     case 0245:
         /* Чтение регистра ТЕГБРЧ */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Чтение ТЕГБРЧ\n", cpu->index);
         cpu->core.ACC = 0; //TODO
         break;
 
     case 046:
         /* Запись маски внешних прерываний */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Установка ГРМ\n", cpu->index);
         cpu->core.GRM = cpu->core.ACC;
         break;
 
     case 0246:
         /* Чтение маски внешних прерываний */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Чтение ГРМ\n", cpu->index);
         cpu->core.ACC = cpu->core.GRM;
         break;
@@ -364,21 +376,21 @@ static void cmd_002(struct ElSvsProcessor *cpu)
     case 047:
         /* Clearing the external interrupt register: */
         /* it is impossible to clear wired (stateless) bits this way */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Гашение РВП\n", cpu->index);
         cpu->core.GRVP &= cpu->core.ACC | GRVP_WIRED_BITS;
         break;
 
     case 0247:
         /* Чтение регистра внешних прерываний */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Чтение РВП\n", cpu->index);
         cpu->core.ACC = cpu->core.GRVP;
         break;
 
     case 050:
         /* Запись в регистр прерываний процессорам */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Запись в ПП\n", cpu->index);
         cpu->core.PP = cpu->core.ACC & (CONF_IOM_MASK | CONF_CPU_MASK | CONF_DATA_MASK);
         if (cpu->core.ACC & CONF_MT) {
@@ -398,14 +410,14 @@ static void cmd_002(struct ElSvsProcessor *cpu)
 
     case 0250:
         /* Чтение номера процессора */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Чтение номера процессора\n", cpu->index);
         cpu->core.ACC = cpu->index;
         break;
 
     case 051:
         /* Запись в регистр ответов процессорам */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Запись в ОПП\n", cpu->index);
         cpu->core.OPP = cpu->core.ACC & (CONF_IOM_MASK | CONF_CPU_MASK | CONF_DATA_MASK);
         if (cpu->core.ACC & CONF_MT) {
@@ -420,7 +432,7 @@ static void cmd_002(struct ElSvsProcessor *cpu)
 
     case 052:
         /* Гашение регистра прерываний от процессоров */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Гашение ПОП\n", cpu->index);
         /* Оставляем бит передачи МПД. */
         cpu->core.POP &= cpu->core.ACC | CONF_MT;
@@ -428,77 +440,77 @@ static void cmd_002(struct ElSvsProcessor *cpu)
 
     case 0252:
         /* Чтение регистра прерываний от процессоров */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Чтение ПОП\n", cpu->index);
         cpu->core.ACC = cpu->core.POP;
         break;
 
     case 053:
         /* Гашение регистра ответов от процессоров */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Гашение ОПОП\n", cpu->index);
         cpu->core.OPOP &= cpu->core.ACC;
         break;
 
     case 0253:
         /* Чтение регистра ответов от процессоров */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Чтение ОПОП\n", cpu->index);
         cpu->core.ACC = cpu->core.OPOP;
         break;
 
     case 054:
         /* Запись в регистр конфигурации процессора */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Установка конфигурации процессора\n", cpu->index);
         cpu->core.RKP = cpu->core.ACC & (CONF_IOM_MASK | CONF_CPU_MASK | CONF_MR | CONF_MT);
         break;
 
     case 0254:
         /* Чтение регистра конфигурации процессора */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Чтение регистра конфигурации процессора\n", cpu->index);
         cpu->core.ACC = cpu->core.RKP;
         break;
 
     case 055:
         /* Запись в регистр аварии процессоров */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Запись в регистр аварии процессоров\n", cpu->index);
         /* игнорируем */
         break;
 
     case 0255:
         /* Чтение регистра аварии процессоров */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Чтение регистра аварии процессоров\n", cpu->index);
         cpu->core.ACC = 0;
         break;
 
     case 056:
         /* Запись в регистр часов */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Установка часов\n", cpu->index);
         //TODO
         break;
 
     case 0256:
         /* Чтение регистра часов */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Чтение регистра часов\n", cpu->index);
         cpu->core.ACC = 0; //TODO
         break;
 
     case 057:
         /* Запись в регистр таймера */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Установка таймера\n", cpu->index);
         //TODO
         break;
 
     case 0257:
         /* Чтение регистра таймера */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Чтение регистра таймера\n", cpu->index);
         cpu->core.ACC = 0; //TODO
         break;
@@ -506,7 +518,7 @@ static void cmd_002(struct ElSvsProcessor *cpu)
     case 060: case 061: case 062: case 063:
     case 064: case 065: case 066: case 067:
         /* Запись в регистры приписки супервизора */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Установка приписки супервизора\n", cpu->index);
         mmu_set_rp(cpu, cpu->Aex & 7, cpu->core.ACC, 1);
         break;
@@ -518,7 +530,7 @@ static void cmd_002(struct ElSvsProcessor *cpu)
          * Биты 2 и 3 - признаки формирования контрольных
          * разрядов (ПКП и ПКЛ).
          */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Установка режимов УУ\n", cpu->index);
 
         if (cpu->Aex & 1) cpu->core.RUU |= RUU_AVOST_DISABLE;
@@ -533,7 +545,7 @@ static void cmd_002(struct ElSvsProcessor *cpu)
 
     case 0140:
         /* Сброс контрольных признаков (СКП). */
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS)
+        if (cpu->trace_instructions | cpu->trace_registers)
             fprintf(cpu->log_output, "cpu%d --- Сброс контрольных признаков\n",
                 cpu->index);
         //TODO
@@ -600,8 +612,8 @@ void cpu_one_instr(struct ElSvsProcessor *cpu)
     }
 
     /* Трассировка команды: адрес, код и мнемоника. */
-    if (cpu->trace_mode >= TRACE_INSTRUCTIONS ||
-        (cpu->trace_mode == TRACE_EXTRACODES && is_extracode(opcode))) {
+    if (cpu->trace_instructions ||
+        (cpu->trace_extracodes && is_extracode(opcode))) {
         svs_trace_opcode(cpu, paddr);
     }
 
@@ -1181,7 +1193,7 @@ branch_zero:
     }
 
     /* Трассировка изменённых регистров. */
-    if (cpu->trace_mode == TRACE_ALL) {
+    if (cpu->trace_registers) {
         svs_trace_registers(cpu);
     }
 #if 0
@@ -1242,7 +1254,7 @@ ElSvsStatus ElSvsSimulate(struct ElSvsProcessor *cpu)
     int iintr = 0;
 
     /* Трассировка начального состояния. */
-    if (cpu->trace_mode == TRACE_ALL) {
+    if (cpu->trace_registers) {
         svs_trace_registers(cpu);
     }
 
@@ -1255,7 +1267,8 @@ ElSvsStatus ElSvsSimulate(struct ElSvsProcessor *cpu)
     if (r) {
         const char *message = sim_stop_messages[r];
 
-        if (cpu->trace_mode >= TRACE_INSTRUCTIONS) {
+        if (cpu->trace_instructions | cpu->trace_memory |
+            cpu->trace_registers | cpu->trace_fetch) {
             fprintf(cpu->log_output, "cpu%d --- %s\n",
                 cpu->index, message);
         }
@@ -1424,7 +1437,8 @@ ret:        return r;
         {
             if (cpu->core.RPR) {
                 /* internal interrupt */
-                if (cpu->trace_mode >= TRACE_INSTRUCTIONS) {
+                if (cpu->trace_instructions | cpu->trace_memory |
+                    cpu->trace_registers | cpu->trace_fetch) {
                     fprintf(cpu->log_output, "cpu%d --- Внутреннее прерывание\n",
                         cpu->index);
                 }
@@ -1432,7 +1446,8 @@ ret:        return r;
             }
             if (cpu->core.GRVP & cpu->core.GRM) {
                 /* external interrupt */
-                if (cpu->trace_mode >= TRACE_INSTRUCTIONS) {
+                if (cpu->trace_instructions | cpu->trace_memory |
+                    cpu->trace_registers | cpu->trace_fetch) {
                     fprintf(cpu->log_output, "cpu%d --- Внешнее прерывание\n",
                         cpu->index);
                 }
@@ -1453,7 +1468,8 @@ ret:        return r;
  */
 void cpu_activate_timer(struct ElSvsProcessor *cpu)
 {
-    if (cpu->trace_mode >= TRACE_INSTRUCTIONS) {
+    if (cpu->trace_instructions | cpu->trace_memory |
+        cpu->trace_registers | cpu->trace_fetch) {
         fprintf(cpu->log_output, "---- --- Timer\n");
     }
 

@@ -4,9 +4,12 @@
 // For details, see: https://github.com/drmonkeysee/CinyTest
 //
 #include <stdlib.h>
+#include <unistd.h>
 #include "cinytest/ciny.h"
 #include "el_master_api.h"
 #include "el_svs_api.h"
+
+static const char log_filename[] = "test.output";
 
 //
 // Mock implementation of the physical memory.
@@ -56,18 +59,28 @@ void exit(int status)
 }
 
 //
-// Setup for every test: instantiate the processor.
+// Setup for every test.
 //
 static void setup(void **pcontext)
 {
-    *pcontext = ElSvsAllocate(0);
+    // Instantiate the processor.
+    struct ElSvsProcessor *cpu = ElSvsAllocate(0);
+    *pcontext = cpu;
+
+    // Enable full trace to a file.
+    ElSvsSetTrace(cpu, "ifmxr", log_filename);
 }
 
 //
-// Teardown for every test: deallocate the processor.
+// Teardown for every test.
 //
 static void teardown(void **pcontext)
 {
+    // Close the trace file.
+    struct ElSvsProcessor *cpu = *pcontext;
+    ElSvsSetTrace(cpu, "", "");
+
+    // Deallocate the processor.
     free(*pcontext);
     *pcontext = NULL;
 }
@@ -1580,6 +1593,7 @@ int main(int argc, char *argv[])
     // Enable stdout/stderr from the tests.
     setenv("CINYTEST_SUPPRESS_OUTPUT", "no", 0);
 
+    unlink(log_filename);
     if (ct_runsuite_withargs(&suite, argc, argv) != 0) {
         // Some tests failed.
         return 1;
