@@ -4,10 +4,10 @@
 start   start   '10'
         utc
         vjm     a(2)            , справа
-a       utm     -2(2)           , a = 2
+a       utm     -9(2)           , a = 9
         v1m     fail(2)
 c       дк      ’31’,b(2)       , слева
-b       utm     -4(2)           , b = 4
+b       utm     -11(2)          , b = 11
         v1m     fail(2)
 d       дк      ’31’,f(2)       , слева
 e       utc     -1

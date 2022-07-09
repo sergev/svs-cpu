@@ -78,6 +78,9 @@ void ElSvsSetM(struct ElSvsProcessor *cpu, unsigned index, unsigned val);
  */
 unsigned ElSvsGetPC(struct ElSvsProcessor *cpu);
 unsigned ElSvsGetM(struct ElSvsProcessor *cpu, unsigned index);
+uint64_t ElSvsGetAcc(struct ElSvsProcessor *cpu);
+uint64_t ElSvsGetRMR(struct ElSvsProcessor *cpu);
+unsigned ElSvsGetRAU(struct ElSvsProcessor *cpu);
 
 /*
  * Write a data word to memory.

@@ -157,6 +157,21 @@ unsigned ElSvsGetM(struct ElSvsProcessor *cpu, unsigned index)
     return cpu->core.M[index];
 }
 
+uint64_t ElSvsGetAcc(struct ElSvsProcessor *cpu)
+{
+    return cpu->core.ACC;
+}
+
+uint64_t ElSvsGetRMR(struct ElSvsProcessor *cpu)
+{
+    return cpu->core.RMR;
+}
+
+unsigned ElSvsGetRAU(struct ElSvsProcessor *cpu)
+{
+    return cpu->core.RAU;
+}
+
 /*
  * Request routine
  */
@@ -778,6 +793,7 @@ void cpu_one_instr(struct ElSvsProcessor *cpu)
         cpu->core.ACC = svs_count_ones(cpu->core.ACC) + mmu_load(cpu, cpu->Aex);
         if (cpu->core.ACC & BIT49)
             cpu->core.ACC = (cpu->core.ACC + 1) & BITS48;
+        cpu->core.RMR = 0;
         cpu->core.RAU = SET_LOGICAL(cpu->core.RAU);
         break;
     case 023:                                       /* нед, anx */
