@@ -68,7 +68,7 @@ static void setup(void **pcontext)
     *pcontext = cpu;
 
     // Enable full trace to a file.
-    ElSvsSetTrace(cpu, "ifmxr", log_filename);
+    ElSvsSetTrace(cpu, "imxr", log_filename);
 }
 
 //

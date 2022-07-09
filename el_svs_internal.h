@@ -49,7 +49,6 @@
 #define BITS41          00037777777777777LL     // биты 41..1 - мантисса и знак
 #define BITS42          00077777777777777LL     // биты 42..1 - мантисса и оба знака
 #define BITS48          07777777777777777LL     // биты 48..1
-#define BITS48_42       07740000000000000LL     // биты 48..42 - порядок
 #define ADDR(x)         ((x) & BITS(15))        // адрес слова
 
 //
@@ -57,10 +56,7 @@
 //
 #define TAG_INSN48      035
 #define TAG_NUMBER48    036
-#define TAG_BITSET      020
-
 #define IS_INSN48(t)    ((t) == TAG_INSN48)
-
 #define IS_48BIT(t)     ((t) == TAG_INSN48 || (t) == TAG_NUMBER48)
 
 //
