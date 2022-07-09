@@ -5,7 +5,7 @@
 //  Created by Brandon Stansbury on 9/1/14.
 //  Copyright (c) 2014 Brandon Stansbury. All rights reserved.
 //
-
+#define _DEFAULT_SOURCE
 #include <unistd.h>
 
 #include <stddef.h>
@@ -50,7 +50,9 @@ FILE *ct_replacestream(FILE *stream)
     fflush(stream);
 
     const int new_stream = dup(fileno(stream));
-    freopen("/dev/null", "w", stream);
+    if (!freopen("/dev/null", "w", stream))
+        fprintf(stream, "freopen('/dev/null') failed\n");
+
     return fdopen(new_stream, "w");
 }
 

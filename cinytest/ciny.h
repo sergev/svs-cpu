@@ -150,7 +150,7 @@ ct_makesuite_setup_teardown_named(__func__, \
  */
 inline struct ct_testsuite
     ct_makesuite_setup_teardown_named(const char *name, size_t count,
-                                      const struct ct_testcase tests[count],
+                                      const struct ct_testcase tests[],
                                       ct_setupteardown_function *setup,
                                       ct_setupteardown_function *teardown)
 {
@@ -200,7 +200,7 @@ size_t ct_runcount_withargs(size_t count,
  @return The number of failed tests.
  */
 inline size_t ct_runsuite_withargs(const struct ct_testsuite *suite,
-                                   int argc, char *argv[argc+1])
+                                   int argc, char *argv[])
 {
     return ct_runcount_withargs(1, suite, argc, argv);
 }

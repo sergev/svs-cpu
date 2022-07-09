@@ -3,6 +3,7 @@
 // Using the CinyTest framework.
 // For details, see: https://github.com/drmonkeysee/CinyTest
 //
+#define _DEFAULT_SOURCE
 #include <stdlib.h>
 #include <unistd.h>
 #include "cinytest/ciny.h"
