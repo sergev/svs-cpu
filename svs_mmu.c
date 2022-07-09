@@ -27,11 +27,11 @@
 
 static void mmu_protection_check(struct ElSvsProcessor *cpu, int vaddr)
 {
-    /* Защита блокируется в режиме супервизора для физических (!) адресов 1-7 (ТО-8) - WTF? */
+    // Защита блокируется в режиме супервизора для физических (!) адресов 1-7 (ТО-8) - WTF?
     int tmp_prot_disabled = (cpu->core.M[PSW] & PSW_PROT_DISABLE) ||
         (IS_SUPERVISOR(cpu->core.RUU) && (cpu->core.M[PSW] & PSW_MMAP_DISABLE) && vaddr < 010);
 
-    /* Защита не заблокирована, а лист закрыт */
+    // Защита не заблокирована, а лист закрыт
     if (! tmp_prot_disabled && (cpu->core.RZ & (1 << (vaddr >> 10)))) {
         cpu->core.bad_addr = vaddr >> 10;
         if (cpu->trace_exceptions)
@@ -40,18 +40,18 @@ static void mmu_protection_check(struct ElSvsProcessor *cpu, int vaddr)
     }
 }
 
-/*
- * Трансляция виртуального адреса в физический.
- */
+//
+// Трансляция виртуального адреса в физический.
+//
 static int va_to_pa(struct ElSvsProcessor *cpu, int vaddr)
 {
     int paddr;
 
     if (cpu->core.M[PSW] & PSW_MMAP_DISABLE) {
-        /* Приписка отключена. */
+        // Приписка отключена.
         paddr = vaddr;
     } else {
-        /* Приписка работает. */
+        // Приписка работает.
         int vpage    = vaddr >> 10;
         int offset   = vaddr & BITS(10);
         int physpage = IS_SUPERVISOR(cpu->core.RUU) ?
@@ -62,10 +62,10 @@ static int va_to_pa(struct ElSvsProcessor *cpu, int vaddr)
     return paddr;
 }
 
-/*
- * Запись слова и тега в память по виртуальному адресу.
- * Возвращает физический адрес слова.
- */
+//
+// Запись слова и тега в память по виртуальному адресу.
+// Возвращает физический адрес слова.
+//
 static int mmu_store_with_tag(struct ElSvsProcessor *cpu, int vaddr, uint64_t val64, uint8_t t)
 {
     vaddr &= BITS(15);
@@ -74,11 +74,11 @@ static int mmu_store_with_tag(struct ElSvsProcessor *cpu, int vaddr, uint64_t va
 
     mmu_protection_check(cpu, vaddr);
 
-    /* Различаем адреса с припиской и без */
+    // Различаем адреса с припиской и без
     if (cpu->core.M[PSW] & PSW_MMAP_DISABLE) {
-        /* Приписка отключена. */
+        // Приписка отключена.
         if (vaddr < 010) {
-            /* Игнорируем запись в тумблерные регистры. */
+            // Игнорируем запись в тумблерные регистры.
             if (cpu->trace_instructions | cpu->trace_memory | cpu->trace_registers) {
                 fprintf(cpu->log_output, "cpu%d --- Ignore write to pult register %d\n",
                     cpu->index, vaddr);
@@ -86,8 +86,8 @@ static int mmu_store_with_tag(struct ElSvsProcessor *cpu, int vaddr, uint64_t va
             return 0;
         }
     } else {
-        /* Приписка работает. */
-        /* ЗПСЧ: ЗП */
+        // Приписка работает.
+        // ЗПСЧ: ЗП
         if (cpu->core.M[DWP] == vaddr && (cpu->core.M[PSW] & PSW_WRITE_WATCH))
             longjmp(cpu->exception, ESS_STORE_ADDR_MATCH);
 #if 0
@@ -98,23 +98,23 @@ static int mmu_store_with_tag(struct ElSvsProcessor *cpu, int vaddr, uint64_t va
 #endif
     }
 
-    /* Вычисляем физический адрес. */
+    // Вычисляем физический адрес.
     int paddr = va_to_pa(cpu, vaddr);
 
-    /* Пишем в память. */
+    // Пишем в память.
     elMasterRamWordWrite(paddr, t, val64);
 
     return paddr;
 }
 
-/*
- * Запись 48-битного слова в память.
- */
+//
+// Запись 48-битного слова в память.
+//
 void mmu_store(struct ElSvsProcessor *cpu, int vaddr, uint64_t val)
 {
-    /* Вычисляем тег.
-     * Если ПКП=0 и ПКЛ=0, то тег 35 (команда),
-     * иначе тег 36 (данные). */
+    // Вычисляем тег.
+    // Если ПКП=0 и ПКЛ=0, то тег 35 (команда),
+    // иначе тег 36 (данные).
     uint8_t t = (cpu->core.RUU & (RUU_CHECK_RIGHT | RUU_CHECK_LEFT)) ?
         TAG_NUMBER48 : TAG_INSN48;
 
@@ -128,9 +128,9 @@ void mmu_store(struct ElSvsProcessor *cpu, int vaddr, uint64_t val)
     }
 }
 
-/*
- * Запись 64-битного слова в память.
- */
+//
+// Запись 64-битного слова в память.
+//
 void mmu_store64(struct ElSvsProcessor *cpu, int vaddr, uint64_t val64)
 {
     int paddr = mmu_store_with_tag(cpu, vaddr, val64, cpu->core.TagR);
@@ -148,10 +148,10 @@ void mmu_store64(struct ElSvsProcessor *cpu, int vaddr, uint64_t val64)
     }
 }
 
-/*
- * Чтение операнда и тега из памяти по виртуальному адресу.
- * Возвращает физический адрес слова.
- */
+//
+// Чтение операнда и тега из памяти по виртуальному адресу.
+// Возвращает физический адрес слова.
+//
 static int mmu_load_with_tag(struct ElSvsProcessor *cpu, int vaddr, uint64_t *val64, uint8_t *t)
 {
     vaddr &= BITS(15);
@@ -163,12 +163,12 @@ static int mmu_load_with_tag(struct ElSvsProcessor *cpu, int vaddr, uint64_t *va
 
     mmu_protection_check(cpu, vaddr);
 
-    /* Различаем адреса с припиской и без */
+    // Различаем адреса с припиской и без
     if (cpu->core.M[PSW] & PSW_MMAP_DISABLE) {
-        /* Приписка отключена. */
+        // Приписка отключена.
     } else {
-        /* Приписка работает. */
-        /* ЗПСЧ: СЧ */
+        // Приписка работает.
+        // ЗПСЧ: СЧ
         if (cpu->core.M[DWP] == vaddr && !(cpu->core.M[PSW] & PSW_WRITE_WATCH))
             longjmp(cpu->exception, ESS_LOAD_ADDR_MATCH);
 #if 0
@@ -179,24 +179,24 @@ static int mmu_load_with_tag(struct ElSvsProcessor *cpu, int vaddr, uint64_t *va
 #endif
     }
 
-    /* Вычисляем физический адрес слова */
+    // Вычисляем физический адрес слова
     int paddr = va_to_pa(cpu, vaddr);
 
     if (paddr >= 010) {
-        /* Из памяти */
+        // Из памяти
         elMasterRamWordRead(paddr, t, val64);
     } else {
-        /* С тумблерных регистров */
+        // С тумблерных регистров
         *val64 = cpu->pult[paddr] << 16;
         *t = TAG_INSN48;
     }
     return paddr;
 }
 
-/*
- * Чтение 64-битного операнда.
- * Тег попадает в регистр тега.
- */
+//
+// Чтение 64-битного операнда.
+// Тег попадает в регистр тега.
+//
 uint64_t mmu_load64(struct ElSvsProcessor *cpu, int vaddr, int tag_check)
 {
     uint64_t val64;
@@ -218,7 +218,7 @@ uint64_t mmu_load64(struct ElSvsProcessor *cpu, int vaddr, int tag_check)
             (int) val64 & 07777);
     }
 
-    /* Прерывание (контроль числа), если попалось 48-битное слово. */
+    // Прерывание (контроль числа), если попалось 48-битное слово.
     if (tag_check && IS_48BIT(t) /*&& (mmu_unit.flags & CHECK_ENB)*/) {
         cpu->core.bad_addr = paddr & 7;
         printf("--- (%05o) контроль числа", paddr);
@@ -229,9 +229,9 @@ uint64_t mmu_load64(struct ElSvsProcessor *cpu, int vaddr, int tag_check)
     return val64;
 }
 
-/*
- * Чтение 48-битного операнда.
- */
+//
+// Чтение 48-битного операнда.
+//
 uint64_t mmu_load(struct ElSvsProcessor *cpu, int vaddr)
 {
     uint64_t val;
@@ -249,27 +249,27 @@ uint64_t mmu_load(struct ElSvsProcessor *cpu, int vaddr)
         fprintf(cpu->log_output, "\n");
     }
 
-    /* Прерывание (контроль числа), если попалось 64-битное слово.
-     * На тумблерных регистрах контроля числа не бывает. */
+    // Прерывание (контроль числа), если попалось 64-битное слово.
+    // На тумблерных регистрах контроля числа не бывает.
     if (paddr >= 010 && ! IS_48BIT(t) /*&& (mmu_unit.flags & CHECK_ENB)*/) {
         cpu->core.bad_addr = paddr & 7;
         printf("--- (%05o) контроль числа", paddr);
         longjmp(cpu->exception, ESS_RAM_CHECK);
     }
 
-    /* Тег не запоминаем. */
+    // Тег не запоминаем.
     return val & BITS48;
 }
 
 static void mmu_fetch_check(struct ElSvsProcessor *cpu, int vaddr)
 {
-    /* В режиме супервизора защиты нет */
+    // В режиме супервизора защиты нет
     if (! IS_SUPERVISOR(cpu->core.RUU)) {
         int page = cpu->UTLB[vaddr >> 10];
-        /*
-         * Для команд в режиме пользователя признак защиты -
-         * 0 в регистре приписки.
-         */
+        //
+        // Для команд в режиме пользователя признак защиты -
+        // 0 в регистре приписки.
+        //
         if (page == 0) {
             cpu->core.bad_addr = vaddr >> 10;
             if (cpu->trace_exceptions)
@@ -279,9 +279,9 @@ static void mmu_fetch_check(struct ElSvsProcessor *cpu, int vaddr)
     }
 }
 
-/*
- * Выборка команды
- */
+//
+// Выборка команды
+//
 uint64_t mmu_fetch(struct ElSvsProcessor *cpu, int vaddr, int *paddrp)
 {
     uint64_t val;
@@ -295,20 +295,20 @@ uint64_t mmu_fetch(struct ElSvsProcessor *cpu, int vaddr, int *paddrp)
 
     mmu_fetch_check(cpu, vaddr);
 
-    /* КРА */
+    // КРА
     if (cpu->core.M[IBP] == vaddr && ! IS_SUPERVISOR(cpu->core.RUU))
         longjmp(cpu->exception, ESS_INSN_ADDR_MATCH);
 
-    /* Вычисляем физический адрес слова */
+    // Вычисляем физический адрес слова
     int paddr = IS_SUPERVISOR(cpu->core.RUU) ? vaddr : va_to_pa(cpu, vaddr);
 
     if (paddr >= 010) {
-        /* Из памяти */
+        // Из памяти
         uint64_t val64;
         elMasterRamWordRead(paddr, &t, &val64);
         val = val64 >> 16;
     } else {
-        /* from switch regs */
+        // from switch regs
         val = cpu->pult[paddr];
         t = TAG_INSN48;
     }
@@ -322,8 +322,8 @@ uint64_t mmu_fetch(struct ElSvsProcessor *cpu, int vaddr, int *paddrp)
         fprintf(cpu->log_output, "\n");
     }
 
-    /* Прерывание (контроль команды), если попалась не 48-битная команда.
-     * Тумблерные регистры только с командной сверткой. */
+    // Прерывание (контроль команды), если попалась не 48-битная команда.
+    // Тумблерные регистры только с командной сверткой.
     if (paddr >= 010 && ! IS_INSN48(t)) {
         printf("--- (%05o) контроль команды", vaddr);
         longjmp(cpu->exception, ESS_INSN_CHECK);
@@ -338,9 +338,9 @@ void mmu_set_rp(struct ElSvsProcessor *cpu, int idx, uint64_t val, int superviso
     uint32_t p0, p1, p2, p3;
     const uint32_t mask = (SVS_MEMSIZE >> 10) - 1;
 
-    /* Младшие 5 разрядов 4-х регистров приписки упакованы
-     * по 5 в 1-20 рр, 6-е разряды - в 29-32 рр, 7-е разряды - в 33-36 рр и т.п.
-     */
+    // Младшие 5 разрядов 4-х регистров приписки упакованы
+    // по 5 в 1-20 рр, 6-е разряды - в 29-32 рр, 7-е разряды - в 33-36 рр и т.п.
+    //
     p0 = (val       & 037) | (((val>>28) & 1) << 5) | (((val>>32) & 1) << 6) | (((val>>36) &  1) << 7) | (((val>>40) & 1) << 8) | (((val>>44) & 1) << 9);
     p1 = ((val>>5)  & 037) | (((val>>29) & 1) << 5) | (((val>>33) & 1) << 6) | (((val>>37) &  1) << 7) | (((val>>41) & 1) << 8) | (((val>>45) & 1) << 9);
     p2 = ((val>>10) & 037) | (((val>>30) & 1) << 5) | (((val>>34) & 1) << 6) | (((val>>38) &  1) << 7) | (((val>>42) & 1) << 8) | (((val>>46) & 1) << 9);
@@ -371,7 +371,7 @@ void mmu_setup(struct ElSvsProcessor *cpu)
     const uint32_t mask = (SVS_MEMSIZE >> 10) - 1;
     int i;
 
-    /* Перепись РПi в TLBj. */
+    // Перепись РПi в TLBj.
     for (i=0; i<8; ++i) {
         cpu->UTLB[i*4] = cpu->core.RP[i] & mask;
         cpu->UTLB[i*4+1] = cpu->core.RP[i] >> 12 & mask;
@@ -386,7 +386,7 @@ void mmu_setup(struct ElSvsProcessor *cpu)
 
 void mmu_set_protection(struct ElSvsProcessor *cpu, int idx, uint64_t val)
 {
-    /* Разряды сумматора, записываемые в регистр защиты - 21-28 */
+    // Разряды сумматора, записываемые в регистр защиты - 21-28
     int mask = 0xff << (idx * 8);
 
     val = ((val >> 20) & 0xff) << (idx * 8);

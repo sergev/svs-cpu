@@ -27,8 +27,8 @@
 
 typedef struct {
     uint64_t mantissa;
-    unsigned exponent;                  /* offset by 64 */
-} alureg_t;                             /* ALU register type */
+    unsigned exponent;                  // offset by 64
+} alureg_t;                             // ALU register type
 
 static alureg_t toalu(uint64_t val)
 {
@@ -59,11 +59,11 @@ static void negate(alureg_t *val)
         val->mantissa |= BIT42;
 }
 
-/*
- * 48-й разряд -> 1, 47-й -> 2 и т.п.
- * Единица 1-го разряда и нулевое слово -> 48,
- * как в первоначальном варианте системы команд.
- */
+//
+// 48-й разряд -> 1, 47-й -> 2 и т.п.
+// Единица 1-го разряда и нулевое слово -> 48,
+// как в первоначальном варианте системы команд.
+//
 int svs_highest_bit(uint64_t val)
 {
     int n = 32, cnt = 0;
@@ -77,11 +77,11 @@ int svs_highest_bit(uint64_t val)
     return 48 - cnt;
 }
 
-/*
- * Нормализация и округление.
- * Результат помещается в регистры ACC и 40-1 разряды RMR.
- * 48-41 разряды RMR сохраняются.
- */
+//
+// Нормализация и округление.
+// Результат помещается в регистры ACC и 40-1 разряды RMR.
+// 48-41 разряды RMR сохраняются.
+//
 static void normalize_and_round(struct ElSvsProcessor *cpu, alureg_t acc, uint64_t mr, int rnd_rq)
 {
     uint64_t rr = 0;
@@ -159,18 +159,18 @@ zero:   cpu->core.ACC = 0;
     cpu->core.ACC = (uint64_t) (acc.exponent & BITS(7)) << 41 |
         (acc.mantissa & BITS41);
     cpu->core.RMR = (cpu->core.RMR & ~BITS40) | (mr & BITS40);
-    /* При переполнении мантисса и младшие разряды порядка верны */
+    // При переполнении мантисса и младшие разряды порядка верны
     if (acc.exponent & 0x80) {
         if (! (cpu->core.RAU & RAU_OVF_DISABLE))
             longjmp(cpu->exception, ESS_OVFL);
     }
 }
 
-/*
- * Сложение и все варианты вычитаний.
- * Исходные значения: регистр ACC и аргумент 'val'.
- * Результат помещается в регистр ACC и 40-1 разряды RMR.
- */
+//
+// Сложение и все варианты вычитаний.
+// Исходные значения: регистр ACC и аргумент 'val'.
+// Результат помещается в регистр ACC и 40-1 разряды RMR.
+//
 void svs_add(struct ElSvsProcessor *cpu, uint64_t val, int negate_acc, int negate_val)
 {
     uint64_t mr;
@@ -181,17 +181,17 @@ void svs_add(struct ElSvsProcessor *cpu, uint64_t val, int negate_acc, int negat
     word = toalu(val);
     if (! negate_acc) {
         if (! negate_val) {
-            /* Сложение */
+            // Сложение
         } else {
-            /* Вычитание */
+            // Вычитание
             negate(&word);
         }
     } else {
         if (! negate_val) {
-            /* Обратное вычитание */
+            // Обратное вычитание
             negate(&acc);
         } else {
-            /* Вычитание модулей */
+            // Вычитание модулей
             if (is_negative(&acc))
                 negate(&acc);
             if (! is_negative(&word))
@@ -211,7 +211,7 @@ void svs_add(struct ElSvsProcessor *cpu, uint64_t val, int negate_acc, int negat
     mr = 0;
     neg = is_negative(&a1);
     if (diff == 0) {
-        /* Nothing to do. */
+        // Nothing to do.
     } else if (diff <= 40) {
         rnd_rq = (mr = (a1.mantissa << (40 - diff)) & BITS40) != 0;
         a1.mantissa = ((a1.mantissa >> diff) |
@@ -236,8 +236,8 @@ void svs_add(struct ElSvsProcessor *cpu, uint64_t val, int negate_acc, int negat
     acc.exponent = a2.exponent;
     acc.mantissa = a1.mantissa + a2.mantissa;
 
-    /* Если требуется нормализация вправо, биты 42:41
-     * принимают значение 01 или 10. */
+    // Если требуется нормализация вправо, биты 42:41
+    // принимают значение 01 или 10.
     switch ((acc.mantissa >> 40) & 3) {
     case 2:
     case 1:
@@ -249,9 +249,9 @@ void svs_add(struct ElSvsProcessor *cpu, uint64_t val, int negate_acc, int negat
     normalize_and_round(cpu, acc, mr, rnd_rq);
 }
 
-/*
- * non-restoring division
- */
+//
+// non-restoring division
+//
 static alureg_t nrdiv(alureg_t n, alureg_t d)
 {
 #define ABS(x) ((x) < 0 ? -x : x)
@@ -260,13 +260,13 @@ static alureg_t nrdiv(alureg_t n, alureg_t d)
     int64_t nn, dd, q, res;
     alureg_t quot;
 
-    /* to compensate for potential normalization to the right  */
+    // to compensate for potential normalization to the right
     nn = INT64(n.mantissa)*2;
     dd = INT64(d.mantissa)*2;
     res = 0, q = BIT41;
 
     if (ABS(nn) >= ABS(dd)) {
-        /* normalization to the right */
+        // normalization to the right
         nn/=2;
         n.exponent++;
     }
@@ -275,7 +275,7 @@ static alureg_t nrdiv(alureg_t n, alureg_t d)
             break;
 
         if (ABS(nn) < BIT40)
-            nn *= 2;        /* magic shortcut */
+            nn *= 2;        // magic shortcut
         else if ((nn > 0) ^ (dd > 0)) {
             res -= q;
             nn = 2*nn+dd;
@@ -290,18 +290,18 @@ static alureg_t nrdiv(alureg_t n, alureg_t d)
     return quot;
 }
 
-/*
- * Деление.
- * Исходные значения: регистр ACC и аргумент 'val'.
- * Результат помещается в регистр ACC, содержимое RMR не определено.
- */
+//
+// Деление.
+// Исходные значения: регистр ACC и аргумент 'val'.
+// Результат помещается в регистр ACC, содержимое RMR не определено.
+//
 void svs_divide(struct ElSvsProcessor *cpu, uint64_t val)
 {
     alureg_t acc;
     alureg_t dividend, divisor;
 
     if (((val ^ (val << 1)) & BIT41) == 0) {
-        /* Ненормализованный делитель: деление на ноль. */
+        // Ненормализованный делитель: деление на ноль.
         longjmp(cpu->exception, ESS_DIVZERO);
     }
     dividend = toalu(cpu->core.ACC);
@@ -312,11 +312,11 @@ void svs_divide(struct ElSvsProcessor *cpu, uint64_t val)
     normalize_and_round(cpu, acc, 0, 0);
 }
 
-/*
- * Умножение.
- * Исходные значения: регистр ACC и аргумент 'val'.
- * Результат помещается в регистр ACC и 40-1 разряды RMR.
- */
+//
+// Умножение.
+// Исходные значения: регистр ACC и аргумент 'val'.
+// Результат помещается в регистр ACC и 40-1 разряды RMR.
+//
 void svs_multiply(struct ElSvsProcessor *cpu, uint64_t val)
 {
     uint8_t neg = 0;
@@ -326,7 +326,7 @@ void svs_multiply(struct ElSvsProcessor *cpu, uint64_t val)
     register uint64_t l;
 
     if (! cpu->core.ACC || ! val) {
-        /* multiplication by zero is zero */
+        // multiplication by zero is zero
         cpu->core.ACC = 0;
         cpu->core.RMR &= ~BITS40;
         return;
@@ -371,10 +371,10 @@ void svs_multiply(struct ElSvsProcessor *cpu, uint64_t val)
     normalize_and_round(cpu, acc, mr, mr != 0);
 }
 
-/*
- * Изменение знака числа на сумматоре ACC.
- * Результат помещается в регистр ACC, RMR гасится.
- */
+//
+// Изменение знака числа на сумматоре ACC.
+// Результат помещается в регистр ACC, RMR гасится.
+//
 void svs_change_sign(struct ElSvsProcessor *cpu, int negate_acc)
 {
     alureg_t acc;
@@ -386,10 +386,10 @@ void svs_change_sign(struct ElSvsProcessor *cpu, int negate_acc)
     normalize_and_round(cpu, acc, 0, 0);
 }
 
-/*
- * Изменение порядка числа на сумматоре ACC.
- * Результат помещается в регистр ACC, RMR гасится.
- */
+//
+// Изменение порядка числа на сумматоре ACC.
+// Результат помещается в регистр ACC, RMR гасится.
+//
 void svs_add_exponent(struct ElSvsProcessor *cpu, int val)
 {
     alureg_t acc;
@@ -400,9 +400,9 @@ void svs_add_exponent(struct ElSvsProcessor *cpu, int val)
     normalize_and_round(cpu, acc, 0, 0);
 }
 
-/*
- * Сборка значения по маске.
- */
+//
+// Сборка значения по маске.
+//
 uint64_t svs_pack(uint64_t val, uint64_t mask)
 {
     uint64_t result;
@@ -417,9 +417,9 @@ uint64_t svs_pack(uint64_t val, uint64_t mask)
     return result;
 }
 
-/*
- * Разборка значения по маске.
- */
+//
+// Разборка значения по маске.
+//
 uint64_t svs_unpack(uint64_t val, uint64_t mask)
 {
     uint64_t result;
@@ -438,9 +438,9 @@ uint64_t svs_unpack(uint64_t val, uint64_t mask)
     return result;
 }
 
-/*
- * Подсчёт количества единиц в слове.
- */
+//
+// Подсчёт количества единиц в слове.
+//
 int svs_count_ones(uint64_t word)
 {
     int c;
@@ -450,15 +450,15 @@ int svs_count_ones(uint64_t word)
     return c;
 }
 
-/*
- * Сдвиг сумматора ACC с выдвижением в регистр младших разрядов RMR.
- * Величина сдвига находится в диапазоне -64..63.
- */
+//
+// Сдвиг сумматора ACC с выдвижением в регистр младших разрядов RMR.
+// Величина сдвига находится в диапазоне -64..63.
+//
 void svs_shift(struct ElSvsProcessor *cpu, int i)
 {
     cpu->core.RMR = 0;
     if (i > 0) {
-        /* Сдвиг вправо. */
+        // Сдвиг вправо.
         if (i < 48) {
             cpu->core.RMR = (cpu->core.ACC << (48-i)) & BITS48;
             cpu->core.ACC >>= i;
@@ -467,7 +467,7 @@ void svs_shift(struct ElSvsProcessor *cpu, int i)
             cpu->core.ACC = 0;
         }
     } else if (i < 0) {
-        /* Сдвиг влево. */
+        // Сдвиг влево.
         i = -i;
         if (i < 48) {
             cpu->core.RMR = cpu->core.ACC >> (48-i);

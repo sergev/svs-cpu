@@ -35,9 +35,9 @@ void svs_trace_opcode(struct ElSvsProcessor *cpu, int paddr)
     fprintf(cpu->log_output, "\n");
 }
 
-/*
- * Print 32-bit value as octal.
- */
+//
+// Print 32-bit value as octal.
+//
 static void fprint_32bits(FILE *of, uint64_t value)
 {
     fprintf(of, "%03o %04o %04o",
@@ -46,9 +46,9 @@ static void fprint_32bits(FILE *of, uint64_t value)
         (int) value & 07777);
 }
 
-/*
- * Print 48-bit value as octal.
- */
+//
+// Print 48-bit value as octal.
+//
 void svs_fprint_48bits(FILE *of, uint64_t value)
 {
     fprintf(of, "%04o %04o %04o %04o",
@@ -58,9 +58,9 @@ void svs_fprint_48bits(FILE *of, uint64_t value)
         (int) value & 07777);
 }
 
-/*
- * Печать регистров процессора, изменившихся с прошлого вызова.
- */
+//
+// Печать регистров процессора, изменившихся с прошлого вызова.
+//
 void svs_trace_registers(struct ElSvsProcessor *cpu)
 {
     int i;

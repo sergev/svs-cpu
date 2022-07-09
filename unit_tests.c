@@ -1,8 +1,8 @@
-//
-// Unit tests for SVS processor.
-// Using the CinyTest framework.
-// For details, see: https://github.com/drmonkeysee/CinyTest
-//
+/*
+ * Unit tests for SVS processor.
+ * Using the CinyTest framework.
+ * For details, see: https://github.com/drmonkeysee/CinyTest
+ */
 #define _DEFAULT_SOURCE
 #include <stdlib.h>
 #include <unistd.h>

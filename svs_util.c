@@ -65,10 +65,10 @@ static const char *opname_long_madlen[16] = {
     "uj",   "vjm",  "ij",   "stop", "vzm",  "v1m",  "*36",  "vlm",
 };
 
-/*
- * Выдача мнемоники по коду инструкции.
- * Код должен быть в диапазоне 000..077 или 0200..0370.
- */
+//
+// Выдача мнемоники по коду инструкции.
+// Код должен быть в диапазоне 000..077 или 0200..0370.
+//
 static const char *svs_opname(int opcode)
 {
 #if 0
@@ -84,9 +84,9 @@ static const char *svs_opname(int opcode)
 #endif
 }
 
-/*
- * Выдача кода инструкции по мнемонике (UTF-8).
- */
+//
+// Выдача кода инструкции по мнемонике (UTF-8).
+//
 static int svs_opcode(char *instr)
 {
     int i;
@@ -102,18 +102,18 @@ static int svs_opcode(char *instr)
     return -1;
 }
 
-/*
- * Преобразование вещественного числа в формат БЭСМ-6.
- *
- * Представление чисел в IEEE 754 (double):
- *      64   63———53 52————–1
- *      знак порядок мантисса
- * Старший (53-й) бит мантиссы не хранится и всегда равен 1.
- *
- * Представление чисел в БЭСМ-6:
- *      48——–42 41   40————————————————–1
- *      порядок знак мантисса в доп. коде
- */
+//
+// Преобразование вещественного числа в формат БЭСМ-6.
+//
+// Представление чисел в IEEE 754 (double):
+//      64   63———53 52————–1
+//      знак порядок мантисса
+// Старший (53-й) бит мантиссы не хранится и всегда равен 1.
+//
+// Представление чисел в БЭСМ-6:
+//      48——–42 41   40————————————————–1
+//      порядок знак мантисса в доп. коде
+//
 uint64_t ieee_to_svs(double d)
 {
     uint64_t word;
@@ -124,20 +124,20 @@ uint64_t ieee_to_svs(double d)
     if (sign)
         d = -d;
     d = frexp(d, &exponent);
-    /* 0.5 <= d < 1.0 */
+    // 0.5 <= d < 1.0
     d = ldexp(d, 40);
     word = (uint64_t)d;
     if (d - word >= 0.5)
-        word += 1;                      /* Округление. */
+        word += 1;                      // Округление
     if (exponent < -64)
-        return 0LL;                     /* Близкое к нулю число */
+        return 0LL;                     // Близкое к нулю число
     if (exponent > 63) {
         return sign ?
-            0xFEFFFFFFFFFFLL :      /* Максимальное число */
-            0xFF0000000000LL;       /* Минимальное число */
+            0xFEFFFFFFFFFFLL :          // Максимальное число
+            0xFF0000000000LL;           // Минимальное число
     }
     if (sign)
-        word = 0x20000000000LL-word;    /* Знак. */
+        word = 0x20000000000LL-word;    // Знак
     word |= ((uint64_t) (exponent + 64)) << 41;
     return word;
 }
@@ -147,28 +147,28 @@ double svs_to_ieee(uint64_t word)
     double mantissa;
     int exponent;
 
-    /* Убираем свертку */
+    // Убираем свертку
     word &= BITS48;
 
-    /* Сдвигаем так, чтобы знак мантиссы пришелся на знак целого;
-     * таким образом, mantissa равно исходной мантиссе, умноженной на 2**63.
-     */
+    // Сдвигаем так, чтобы знак мантиссы пришелся на знак целого;
+    // таким образом, mantissa равно исходной мантиссе, умноженной на 2**63.
+    //
     mantissa = (double)(((int64_t) word) << (64 - 48 + 7));
 
     exponent = word >> 41;
 
-    /* Порядок смещен вверх на 64, и мантиссу нужно скорректировать */
+    // Порядок смещен вверх на 64, и мантиссу нужно скорректировать
     return ldexp(mantissa, exponent - 64 - 63);
 }
 
-/*
- * Пропуск пробелов.
- */
+//
+// Пропуск пробелов.
+//
 static const char *skip_spaces(const char *p)
 {
     for (;;) {
         if (*p == (char) 0xEF && p[1] == (char) 0xBB && p[2] == (char) 0xBF) {
-            /* Skip zero width no-break space. */
+            // Skip zero width no-break space.
             p += 3;
             continue;
         }
@@ -177,17 +177,17 @@ static const char *skip_spaces(const char *p)
             continue;
         }
         if (*p == '#') {
-            /* Comment. */
+            // Comment.
             return p + strlen(p);
         }
         return p;
     }
 }
 
-/*
- * Fetch Unicode symbol from UTF-8 string.
- * Advance string pointer.
- */
+//
+// Fetch Unicode symbol from UTF-8 string.
+// Advance string pointer.
+//
 static int utf8_to_unicode(const char **p)
 {
     int c1, c2, c3;
@@ -223,73 +223,73 @@ static const char *get_alnum(const char *iptr, char *optr)
     return iptr;
 }
 
-/*
- * Parse single instruction (half word).
- * Allow mnemonics or octal code.
- */
+//
+// Parse single instruction (half word).
+// Allow mnemonics or octal code.
+//
 static const char *parse_instruction(const char *cptr, uint32_t *val)
 {
     int opcode, reg, addr, negate;
     char buf[BUFSIZ];
 
-    cptr = skip_spaces(cptr);                       /* absorb spaces */
+    cptr = skip_spaces(cptr);                       // absorb spaces
     if (*cptr >= '0' && *cptr <= '7') {
-        /* Восьмеричное представление. */
-        cptr = svs_parse_octal(cptr, &reg);         /* get register */
+        // Восьмеричное представление.
+        cptr = svs_parse_octal(cptr, &reg);         // get register
         if (! cptr || reg > 15) {
-            /*printf("Bad register\n");*/
+            //printf("Bad register\n");
             return 0;
         }
-        cptr = skip_spaces(cptr);                   /* absorb spaces */
+        cptr = skip_spaces(cptr);                   // absorb spaces
         if (*cptr == '2' || *cptr == '3') {
-            /* Длинная команда. */
+            // Длинная команда.
             cptr = svs_parse_octal(cptr, &opcode);
             if (! cptr || opcode < 020 || opcode > 037) {
-                /*printf("Bad long opcode\n");*/
+                //printf("Bad long opcode\n");
                 return 0;
             }
             opcode <<= 3;
         } else {
-            /* Короткая команда. */
+            // Короткая команда.
             cptr = svs_parse_octal(cptr, &opcode);
             if (! cptr || opcode > 0177) {
-                /*printf("Bad short opcode\n");*/
+                //printf("Bad short opcode\n");
                 return 0;
             }
         }
-        cptr = svs_parse_octal(cptr, &addr);        /* get address */
+        cptr = svs_parse_octal(cptr, &addr);        // get address
         if (! cptr || addr > BITS(15) ||
             (opcode <= 0177 && addr > BITS(12))) {
-            /*printf("Bad address\n");*/
+            //printf("Bad address\n");
             return 0;
         }
     } else {
-        /* Мнемоническое представление команды. */
-        cptr = get_alnum(cptr, buf);               /* get opcode */
+        // Мнемоническое представление команды.
+        cptr = get_alnum(cptr, buf);               // get opcode
         opcode = svs_opcode(buf);
         if (opcode < 0) {
-            /*printf("Bad opname: %s\n", buf);*/
+            //printf("Bad opname: %s\n", buf);
             return 0;
         }
         negate = 0;
-        cptr = skip_spaces(cptr);                   /* absorb spaces */
-        if (*cptr == '-') {                         /* negative offset */
+        cptr = skip_spaces(cptr);                   // absorb spaces
+        if (*cptr == '-') {                         // negative offset
             negate = 1;
-            cptr = skip_spaces(cptr + 1);           /* absorb spaces */
+            cptr = skip_spaces(cptr + 1);           // absorb spaces
         }
         addr = 0;
         if (*cptr >= '0' && *cptr <= '7') {
-            /* Восьмеричный адрес. */
+            // Восьмеричный адрес.
             cptr = svs_parse_octal(cptr, &addr);
             if (! cptr || addr > BITS(15)) {
-                /*printf("Bad address: %o\n", addr);*/
+                //printf("Bad address: %o\n", addr);
                 return 0;
             }
             if (negate)
                 addr = (- addr) & BITS(15);
             if (opcode <= 077 && addr > BITS(12)) {
                 if (addr < 070000) {
-                    /*printf("Bad short address: %o\n", addr);*/
+                    //printf("Bad short address: %o\n", addr);
                     return 0;
                 }
                 opcode |= 0100;
@@ -297,17 +297,17 @@ static const char *parse_instruction(const char *cptr, uint32_t *val)
             }
         }
         reg = 0;
-        cptr = skip_spaces(cptr);                   /* absorb spaces */
+        cptr = skip_spaces(cptr);                   // absorb spaces
         if (*cptr == '(') {
-            /* Индекс-регистр в скобках. */
+            // Индекс-регистр в скобках.
             cptr = svs_parse_octal(cptr+1, &reg);
             if (! cptr || reg > 15) {
-                /*printf("Bad register: %o\n", reg);*/
+                //printf("Bad register: %o\n", reg);
                 return 0;
             }
-            cptr = skip_spaces(cptr);               /* absorb spaces */
+            cptr = skip_spaces(cptr);               // absorb spaces
             if (*cptr != ')') {
-                /*printf("No closing brace\n");*/
+                //printf("No closing brace\n");
                 return 0;
             }
             ++cptr;
@@ -317,9 +317,9 @@ static const char *parse_instruction(const char *cptr, uint32_t *val)
     return cptr;
 }
 
-/*
- * Instruction parse: two commands per word.
- */
+//
+// Instruction parse: two commands per word.
+//
 static bool parse_instruction_word(const char *cptr, uint64_t *val)
 {
     uint32_t left, right;
@@ -335,18 +335,18 @@ static bool parse_instruction_word(const char *cptr, uint64_t *val)
         if (! cptr)
             return false;
     }
-    cptr = skip_spaces(cptr);                       /* absorb spaces */
+    cptr = skip_spaces(cptr);                       // absorb spaces
     if (*cptr != 0 && *cptr != ';' && *cptr != '\n' && *cptr != '\r') {
-        /*printf("Extra symbols at eoln: %s\n", cptr);*/
+        //printf("Extra symbols at eoln: %s\n", cptr);
         return false;
     }
     *val = (uint64_t) left << 24 | right;
     return true;
 }
 
-/*
- * Печать машинной инструкции с мнемоникой.
- */
+//
+// Печать машинной инструкции с мнемоникой.
+//
 void svs_fprint_cmd(FILE *of, uint32_t cmd)
 {
     int reg, opcode, addr;
@@ -376,9 +376,9 @@ void svs_fprint_cmd(FILE *of, uint32_t cmd)
     }
 }
 
-/*
- * Печать машинной инструкции в восьмеричном виде.
- */
+//
+// Печать машинной инструкции в восьмеричном виде.
+//
 void svs_fprint_insn(FILE *of, uint32_t insn)
 {
     if (insn & BBIT(20))
@@ -389,9 +389,9 @@ void svs_fprint_insn(FILE *of, uint32_t insn)
                  insn >> 20, (insn >> 12) & 0177, insn & 07777);
 }
 
-/*
- * Convert assembly source code into binary word.
- */
+//
+// Convert assembly source code into binary word.
+//
 uint64_t ElSvsAsm(const char *src)
 {
     uint64_t val;
@@ -403,15 +403,15 @@ uint64_t ElSvsAsm(const char *src)
     return val;
 }
 
-/*
- * Чтение строки входного файла.
- * Форматы строк:
- * п 76543                     - адрес пуска
- * в 12345                     - адрес ввода
- * ч -123.45e+6                - вещественное число
- * с 0123 4567 0123 4567       - восьмеричное слово
- * к 00 22 00000 00 010 0000   - команды
- */
+//
+// Чтение строки входного файла.
+// Форматы строк:
+// п 76543                     - адрес пуска
+// в 12345                     - адрес ввода
+// ч -123.45e+6                - вещественное число
+// с 0123 4567 0123 4567       - восьмеричное слово
+// к 00 22 00000 00 010 0000   - команды
+//
 static bool svs_read_line(FILE *input, int *type, uint64_t *val)
 {
     char buf[512];
@@ -429,7 +429,7 @@ again:
     if (c == CYRILLIC_SMALL_LETTER_VE ||
         c == CYRILLIC_CAPITAL_LETTER_VE ||
         c == 'b' || c == 'B') {
-        /* Адрес размещения данных. */
+        // Адрес размещения данных.
         *type = ':';
         *val = strtol(p, 0, 8);
         return true;
@@ -437,7 +437,7 @@ again:
     if (c == CYRILLIC_SMALL_LETTER_PE ||
         c == CYRILLIC_CAPITAL_LETTER_PE ||
         c == 'p' || c == 'P') {
-        /* Стартовый адрес. */
+        // Стартовый адрес.
         *type = '@';
         *val = strtol(p, 0, 8);
         return true;
@@ -445,7 +445,7 @@ again:
     if (c == CYRILLIC_SMALL_LETTER_CHE ||
         c == CYRILLIC_CAPITAL_LETTER_CHE ||
         c == 'f' || c == 'F') {
-        /* Вещественное число. */
+        // Вещественное число.
         *type = '=';
         *val = ieee_to_svs(strtod(p, 0));
         return true;
@@ -453,14 +453,14 @@ again:
     if (c == CYRILLIC_SMALL_LETTER_ES ||
         c == CYRILLIC_CAPITAL_LETTER_ES ||
         c == 'c' || c == 'C') {
-        /* Восьмеричное слово. */
+        // Восьмеричное слово.
         *type = '=';
         *val = 0;
         for (i=0; i<16; ++i) {
             p = skip_spaces(p);
             if (*p < '0' || *p > '7') {
                 if (i == 0) {
-                    /* слишком короткое слово */
+                    // слишком короткое слово
                     goto bad;
                 }
                 break;
@@ -472,21 +472,21 @@ again:
     if (c == CYRILLIC_SMALL_LETTER_KA ||
         c == CYRILLIC_CAPITAL_LETTER_KA ||
         c == 'k' || c == 'K') {
-        /* Команда. */
+        // Команда.
         *type = '*';
         if (!parse_instruction_word(p, val))
             goto bad;
         return true;
     }
-    /* Неверная строка входного файла */
+    // Неверная строка входного файла
 bad:
     printf("Invalid input line: %s", buf);
     return false;
 }
 
-/*
- * Load memory from file.
- */
+//
+// Load memory from file.
+//
 bool svs_load(struct ElSvsProcessor *cpu, FILE *input)
 {
     int addr, type;
@@ -499,13 +499,13 @@ bool svs_load(struct ElSvsProcessor *cpu, FILE *input)
             return false;
 
         switch (type) {
-        case 0:                 /* EOF */
+        case 0:                 // EOF
             return true;
-        case ':':               /* address */
+        case ':':               // address
             addr = (int)word;
             break;
-        case '=':               /* word */
-        case '*':               /* instruction */
+        case '=':               // word
+        case '*':               // instruction
             if (addr < 010) {
                 cpu->pult[addr] = word;
             } else {
@@ -514,7 +514,7 @@ bool svs_load(struct ElSvsProcessor *cpu, FILE *input)
             }
             ++addr;
             break;
-        case '@':               /* start address */
+        case '@':               // start address
             cpu->core.PC = (uint32_t)word;
             break;
         }
@@ -524,9 +524,9 @@ bool svs_load(struct ElSvsProcessor *cpu, FILE *input)
     return true;
 }
 
-/*
- * Dump memory to file.
- */
+//
+// Dump memory to file.
+//
 void svs_dump(struct ElSvsProcessor *cpu, FILE *of, const char *fnam)
 {
     int addr, last_addr = -1;
