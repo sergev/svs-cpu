@@ -1297,42 +1297,47 @@ static void aax_asx_xsa(void *context)
     struct ElSvsProcessor *cpu = context;
 
     // Store the test code.
-    store_insn(cpu, 010, ElSvsAsm("уиа 2000(17), ржа 3"));
-    store_insn(cpu, 011, ElSvsAsm("уиа 100(16), счи 16"));
-    store_insn(cpu, 012, ElSvsAsm("вч 2012, по 53"));
-    store_insn(cpu, 013, ElSvsAsm("сл 2013, пе 53"));
-    store_insn(cpu, 014, ElSvsAsm("или, пе 53"));
-    store_insn(cpu, 015, ElSvsAsm("сч 2014, вчоб 2013"));
-    store_insn(cpu, 016, ElSvsAsm("вч 2015, пе 53"));
-    store_insn(cpu, 017, ElSvsAsm("или, пе 53"));
-    store_insn(cpu, 020, ElSvsAsm("сч 2014, счм 2013"));
-    store_insn(cpu, 021, ElSvsAsm("счм 2014, счм 2016"));
-    store_insn(cpu, 022, ElSvsAsm("вч (17), пе 53"));
-    store_insn(cpu, 023, ElSvsAsm("сл (17), вчоб (17)"));
-    store_insn(cpu, 024, ElSvsAsm("пе 53, или"));
-    store_insn(cpu, 025, ElSvsAsm("пе 53, сч 2017"));
-    store_insn(cpu, 026, ElSvsAsm("вч 2020, по 53"));
-    store_insn(cpu, 027, ElSvsAsm("сл 2021, пе 53"));
-    store_insn(cpu, 030, ElSvsAsm("или, по 53"));
-    store_insn(cpu, 031, ElSvsAsm("нтж 2022, пе 53"));
-    store_insn(cpu, 032, ElSvsAsm("ржа 2, сч 2021"));
-    store_insn(cpu, 033, ElSvsAsm("счм 2023, счм 2021"));
-    store_insn(cpu, 034, ElSvsAsm("счм 2023, сл (17)"));
-    store_insn(cpu, 035, ElSvsAsm("вч (17), вчоб (17)"));
-    store_insn(cpu, 036, ElSvsAsm("пе 53, ржа 2"));
-    store_insn(cpu, 037, ElSvsAsm("сч 2024, вч 2025"));
-    store_insn(cpu, 040, ElSvsAsm("пе 53, нтж 2023"));
-    store_insn(cpu, 041, ElSvsAsm("пе 53, ржа 77"));
-    store_insn(cpu, 042, ElSvsAsm("сч 2026, сл 2026"));
-    store_insn(cpu, 043, ElSvsAsm("ржа, нтж 2027"));
-    store_insn(cpu, 044, ElSvsAsm("пе 53, ржа"));
-    store_insn(cpu, 045, ElSvsAsm("сч 2030, сл 2031"));
-    store_insn(cpu, 046, ElSvsAsm("нтж 2032, пе 53"));
-    store_insn(cpu, 047, ElSvsAsm("сч 2026, вчоб 2033"));
-    store_insn(cpu, 050, ElSvsAsm("счмр 100, нтж 2034"));
-    store_insn(cpu, 051, ElSvsAsm("пе 53, мода"));
-    store_insn(cpu, 052, ElSvsAsm("стоп 12345(6), мода")); // Magic opcode: Pass
-    store_insn(cpu, 053, ElSvsAsm("стоп 76543(2), мода")); // Magic opcode: Fail
+    store_insn(cpu, 010, ElSvsAsm(" уиа 2000(17), ржа 3"));
+    store_insn(cpu, 011, ElSvsAsm(" уиа 100(16), счи 16"));
+    store_insn(cpu, 012, ElSvsAsm(" вч 2012, по 57"));
+    store_insn(cpu, 013, ElSvsAsm(" сл 2013, пе 57"));
+    store_insn(cpu, 014, ElSvsAsm(" или, пе 57"));
+    store_insn(cpu, 015, ElSvsAsm(" сч 2014, вчоб 2013"));
+    store_insn(cpu, 016, ElSvsAsm(" вч 2015, пе 57"));
+    store_insn(cpu, 017, ElSvsAsm(" или, пе 57"));
+    store_insn(cpu, 020, ElSvsAsm(" сч 2014, счм 2013"));
+    store_insn(cpu, 021, ElSvsAsm(" счм 2014, счм 2016"));
+    store_insn(cpu, 022, ElSvsAsm(" вч (17), пе 57"));
+    store_insn(cpu, 023, ElSvsAsm(" сл (17), вчоб (17)"));
+    store_insn(cpu, 024, ElSvsAsm(" пе 57, или"));
+    store_insn(cpu, 025, ElSvsAsm(" пе 57, сч 2017"));
+    store_insn(cpu, 026, ElSvsAsm(" вч 2020, по 57"));
+    store_insn(cpu, 027, ElSvsAsm(" сл 2021, пе 57"));
+    store_insn(cpu, 030, ElSvsAsm(" или, по 57"));
+    store_insn(cpu, 031, ElSvsAsm(" нтж 2022, пе 57"));
+    store_insn(cpu, 032, ElSvsAsm(" сч 2023, вч 2024"));
+    store_insn(cpu, 033, ElSvsAsm(" нтж 2025, пе 57"));
+    store_insn(cpu, 034, ElSvsAsm(" сч 2024, вч 2023"));
+    store_insn(cpu, 035, ElSvsAsm(" нтж 2026, пе 57"));
+    store_insn(cpu, 036, ElSvsAsm(" ржа 2, сч 2021"));
+    store_insn(cpu, 037, ElSvsAsm(" счм 2027, счм 2021"));
+    store_insn(cpu, 040, ElSvsAsm(" счм 2027, сл (17)"));
+    store_insn(cpu, 041, ElSvsAsm(" вч (17), вчоб (17)"));
+    store_insn(cpu, 042, ElSvsAsm(" пе 57, ржа 2"));
+    store_insn(cpu, 043, ElSvsAsm(" сч 2030, вч 2031"));
+    store_insn(cpu, 044, ElSvsAsm(" пе 57, нтж 2027"));
+    store_insn(cpu, 045, ElSvsAsm(" пе 57, ржа 77"));
+    store_insn(cpu, 046, ElSvsAsm(" сч 2032, сл 2032"));
+    store_insn(cpu, 047, ElSvsAsm(" ржа, нтж 2033"));
+    store_insn(cpu, 050, ElSvsAsm(" пе 57, ржа"));
+    store_insn(cpu, 051, ElSvsAsm(" сч 2034, сл 2035"));
+    store_insn(cpu, 052, ElSvsAsm(" нтж 2036, пе 57"));
+    store_insn(cpu, 053, ElSvsAsm(" сч 2032, вчоб 2037"));
+    store_insn(cpu, 054, ElSvsAsm(" счмр 100, нтж 2040"));
+    store_insn(cpu, 055, ElSvsAsm(" пе 57, мода"));
+    store_insn(cpu, 056, ElSvsAsm("стоп 12345(6), мода")); // Magic opcode: Pass
+    store_insn(cpu, 057, ElSvsAsm("стоп 76543(2), мода")); // Magic opcode: Fail
+
     store_data(cpu, 02012, 00000000000000101ul);
     store_data(cpu, 02013, 00000000000000001ul);
     store_data(cpu, 02014, 00000000000000002ul);
@@ -1342,16 +1347,20 @@ static void aax_asx_xsa(void *context)
     store_data(cpu, 02020, 06400000000000102ul);
     store_data(cpu, 02021, 04110000000000000ul);
     store_data(cpu, 02022, 06400000000000000ul);
-    store_data(cpu, 02023, 04114000000000000ul);
-    store_data(cpu, 02024, 04050000000000000ul);
-    store_data(cpu, 02025, 04060000000000000ul);
-    store_data(cpu, 02026, 00010000000000000ul);
-    store_data(cpu, 02027, 00050000000000000ul);
-    store_data(cpu, 02030, 07700000000001000ul);
-    store_data(cpu, 02031, 04000000000000001ul);
-    store_data(cpu, 02032, 06010000000000001ul);
-    store_data(cpu, 02033, 04010000000000000ul);
-    store_data(cpu, 02034, 03757777777600000ul);
+    store_data(cpu, 02023, 06420000000000000ul);
+    store_data(cpu, 02024, 06420000000000001ul);
+    store_data(cpu, 02025, 06437777777777777ul);
+    store_data(cpu, 02026, 06400000000000001ul);
+    store_data(cpu, 02027, 04114000000000000ul);
+    store_data(cpu, 02030, 04050000000000000ul);
+    store_data(cpu, 02031, 04060000000000000ul);
+    store_data(cpu, 02032, 00010000000000000ul);
+    store_data(cpu, 02033, 00050000000000000ul);
+    store_data(cpu, 02034, 07700000000001000ul);
+    store_data(cpu, 02035, 04000000000000001ul);
+    store_data(cpu, 02036, 06010000000000001ul);
+    store_data(cpu, 02037, 04010000000000000ul);
+    store_data(cpu, 02040, 03757777777600000ul);
 
     // Run the code.
     ElSvsSetPC(cpu, 010);
@@ -1359,7 +1368,7 @@ static void aax_asx_xsa(void *context)
     ct_assertequal(status, ESS_HALT);
 
     // Check registers.
-    ct_assertequal(ElSvsGetPC(cpu), 052u);
+    ct_assertequal(ElSvsGetPC(cpu), 056u);
     ct_assertequal(ElSvsGetAcc(cpu), 0u);
     ct_assertequal(ElSvsGetRMR(cpu), 0u);
     ct_assertequal(ElSvsGetRAU(cpu), 04u);
