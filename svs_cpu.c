@@ -65,31 +65,12 @@ static const char *sim_stop_messages[] = {
 };
 
 //
-// Write a data word to memory.
+// Set value of the Pult register.
 //
-void ElSvsStoreData(struct ElSvsProcessor *cpu, unsigned addr, uint64_t val)
+void ElSvsSetPult(struct ElSvsProcessor *cpu, unsigned index, uint64_t val)
 {
-    if (addr < 010) {
-        // Deposited values for the switch register address range
-        // always go to switch registers.
-        cpu->pult[addr] = val;
-    } else {
-        elMasterRamWordWrite(addr, TAG_NUMBER48, val << 16);
-    }
-}
-
-//
-// Write an instruction word to memory.
-//
-void ElSvsStoreInstruction(struct ElSvsProcessor *cpu, unsigned addr, uint64_t val)
-{
-    if (addr < 010) {
-        // Deposited values for the switch register address range
-        // always go to switch registers.
-        cpu->pult[addr] = val;
-    } else {
-        elMasterRamWordWrite(addr, TAG_INSN48, val << 16);
-    }
+    if (index > 0 && index < 010)
+        cpu->pult[index] = val;
 }
 
 //
