@@ -1496,34 +1496,43 @@ static void multiply(void *context)
     struct ElSvsProcessor *cpu = context;
 
     // Store the test code.
-    store_insn(cpu, 010, ElSvsAsm("уиа 2014(17), ржа 3"));
-    store_insn(cpu, 011, ElSvsAsm("сч 2000, умн 2001"));
+    store_insn(cpu, 010, ElSvsAsm("уиа 2001(17), ржа 3"));
+    store_insn(cpu, 011, ElSvsAsm("сч 2013, умн 2014"));
     store_insn(cpu, 012, ElSvsAsm("зп (17), счмр 100"));
-    store_insn(cpu, 013, ElSvsAsm("зпм 2013, нтж 2002"));
-    store_insn(cpu, 014, ElSvsAsm("пе 30, сч 2013"));
-    store_insn(cpu, 015, ElSvsAsm("нтж 2003, пе 30"));
-    store_insn(cpu, 016, ElSvsAsm("сч 2004, умн 2005"));
+    store_insn(cpu, 013, ElSvsAsm("зпм 2000, нтж 2015"));
+    store_insn(cpu, 014, ElSvsAsm("пе 37, сч 2000"));
+    store_insn(cpu, 015, ElSvsAsm("нтж 2016, пе 37"));
+    store_insn(cpu, 016, ElSvsAsm("сч 2017, умн 2020"));
     store_insn(cpu, 017, ElSvsAsm("зп (17), счмр 100"));
-    store_insn(cpu, 020, ElSvsAsm("зпм 2013, нтж 2006"));
-    store_insn(cpu, 021, ElSvsAsm("пе 30, сч 2013"));
-    store_insn(cpu, 022, ElSvsAsm("слпа 130, нтж 2007"));
-    store_insn(cpu, 023, ElSvsAsm("пе 30, ржа 2"));
-    store_insn(cpu, 024, ElSvsAsm("сч 2010, умн 2011"));
-    store_insn(cpu, 025, ElSvsAsm("зп 2013, нтж 2011"));
-    store_insn(cpu, 026, ElSvsAsm("нтж 2012, пе 30"));
-    store_insn(cpu, 027, ElSvsAsm("стоп 12345(6), мода")); // Magic opcode: Pass
-    store_insn(cpu, 030, ElSvsAsm("стоп 76543(2), мода")); // Magic opcode: Fail
-    store_data(cpu, 02000, 06400000000000005ul);
-    store_data(cpu, 02001, 02400000000000015ul);
-    store_data(cpu, 02002, 05000000000000000ul);
-    store_data(cpu, 02003, 05000000000000101ul);
-    store_data(cpu, 02004, 02400000000000005ul);
-    store_data(cpu, 02005, 06437777777777763ul);
-    store_data(cpu, 02006, 05037777777777777ul);
-    store_data(cpu, 02007, 06417777777777677ul);
-    store_data(cpu, 02010, 04110000000000000ul);
-    store_data(cpu, 02011, 04114000000000000ul);
-    store_data(cpu, 02012, 00040000000000000ul);
+    store_insn(cpu, 020, ElSvsAsm("зпм 2000, нтж 2021"));
+    store_insn(cpu, 021, ElSvsAsm("пе 37, сч 2000"));
+    store_insn(cpu, 022, ElSvsAsm("слпа 130, нтж 2022"));
+    store_insn(cpu, 023, ElSvsAsm("пе 37, ржа"));
+    store_insn(cpu, 024, ElSvsAsm("сч 2023, умн 2024"));
+    store_insn(cpu, 025, ElSvsAsm("нтж 2024, пе 37"));
+    store_insn(cpu, 026, ElSvsAsm("сч 2024, умн 2023"));
+    store_insn(cpu, 027, ElSvsAsm("нтж 2024, пе 37"));
+    store_insn(cpu, 030, ElSvsAsm("сч 2024, умн 2024"));
+    store_insn(cpu, 031, ElSvsAsm("нтж 2023, пе 37"));
+    store_insn(cpu, 032, ElSvsAsm("ржа 2, сч 2025"));
+    store_insn(cpu, 033, ElSvsAsm("умн 2026, зп 2000"));
+    store_insn(cpu, 034, ElSvsAsm("нтж 2026, нтж 2027"));
+    store_insn(cpu, 035, ElSvsAsm("пе 37, мода"));
+    store_insn(cpu, 036, ElSvsAsm("стоп 12345(6), мода")); // Magic opcode: Pass
+    store_insn(cpu, 037, ElSvsAsm("стоп 76543(2), мода")); // Magic opcode: Fail
+    store_data(cpu, 02013, 06400000000000005);
+    store_data(cpu, 02014, 02400000000000015);
+    store_data(cpu, 02015, 05000000000000000);
+    store_data(cpu, 02016, 05000000000000101);
+    store_data(cpu, 02017, 02400000000000005);
+    store_data(cpu, 02020, 06437777777777763);
+    store_data(cpu, 02021, 05037777777777777);
+    store_data(cpu, 02022, 06417777777777677);
+    store_data(cpu, 02023, 04050000000000000);
+    store_data(cpu, 02024, 04020000000000000);
+    store_data(cpu, 02025, 04110000000000000);
+    store_data(cpu, 02026, 04114000000000000);
+    store_data(cpu, 02027, 00040000000000000);
 
     // Run the code.
     ElSvsSetPC(cpu, 010);
@@ -1531,7 +1540,7 @@ static void multiply(void *context)
     ct_assertequal(status, ESS_HALT);
 
     // Check registers.
-    ct_assertequal(ElSvsGetPC(cpu), 027u);
+    ct_assertequal(ElSvsGetPC(cpu), 036u);
     ct_assertequal(ElSvsGetAcc(cpu), 0u);
     ct_assertequal(ElSvsGetRMR(cpu), 0u);
     ct_assertequal(ElSvsGetRAU(cpu), 06u);
