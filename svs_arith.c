@@ -51,12 +51,6 @@ static void negate(alureg_t *val)
     if (is_negative(val))
         val->mantissa |= BIT42;
     val->mantissa = (~val->mantissa + 1) & BITS42;
-    if (((val->mantissa >> 1) ^ val->mantissa) & BIT41) {
-        val->mantissa >>= 1;
-        ++val->exponent;
-    }
-    if (is_negative(val))
-        val->mantissa |= BIT42;
 }
 
 //
@@ -380,8 +374,15 @@ void svs_change_sign(struct ElSvsProcessor *cpu, int negate_acc)
     alureg_t acc;
 
     acc = toalu(cpu->core.ACC);
-    if (negate_acc)
+    if (negate_acc) {
         negate(&acc);
+        if (((acc.mantissa >> 1) ^ acc.mantissa) & BIT41) {
+            acc.mantissa >>= 1;
+            ++acc.exponent;
+        }
+        if (is_negative(&acc))
+            acc.mantissa |= BIT42;
+    }
     cpu->core.RMR = 0;
     normalize_and_round(cpu, acc, 0, 0);
 }
