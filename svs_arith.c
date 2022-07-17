@@ -24,6 +24,7 @@
 #include "el_svs_api.h"
 #include "el_svs_internal.h"
 #include <math.h>
+#include <stdlib.h>
 
 typedef struct {
     int64_t mantissa;                   // Note: signed value
@@ -51,6 +52,15 @@ static inline int is_negative(alureg_t *word)
 static void negate(alureg_t *val)
 {
     val->mantissa = - val->mantissa;
+}
+
+//
+// Вернуть true если число ненормализованное.
+// У нормализованного числа биты 42 и 41 совпадают.
+//
+static inline int is_denormal(alureg_t *val)
+{
+    return ((val->mantissa >> 40) ^ (val->mantissa >> 41)) & 1;
 }
 
 //
@@ -232,9 +242,7 @@ void svs_add(struct ElSvsProcessor *cpu, uint64_t val, int negate_acc, int negat
 
     // Если требуется нормализация вправо, биты 42:41
     // принимают значение 01 или 10.
-    switch ((acc.mantissa >> 40) & 3) {
-    case 2:
-    case 1:
+    if (is_denormal(&acc)) {
         rnd_rq |= acc.mantissa & 1;
         mr = (mr >> 1) | ((acc.mantissa & 1) << 39);
         acc.mantissa >>= 1;
@@ -248,39 +256,35 @@ void svs_add(struct ElSvsProcessor *cpu, uint64_t val, int negate_acc, int negat
 //
 static alureg_t nrdiv(alureg_t n, alureg_t d)
 {
-#define ABS(x) ((x) < 0 ? -x : x)
-#define INT64(x) ((x) & BIT41 ? (0xFFFFFFFFFFFFFFFFLL << 40) | (x) : x)
-
-    int64_t nn, dd, q, res;
+    int64_t q, res = 0;
     alureg_t quot;
 
     // to compensate for potential normalization to the right
-    nn = INT64(n.mantissa)*2;
-    dd = INT64(d.mantissa)*2;
-    res = 0, q = BIT41;
+    n.mantissa <<= 1;
+    d.mantissa <<= 1;
 
-    if (ABS(nn) >= ABS(dd)) {
+    if (llabs(n.mantissa) >= llabs(d.mantissa)) {
         // normalization to the right
-        nn/=2;
-        n.exponent++;
+        n.mantissa >>= 1;
+        ++n.exponent;
     }
-    while (q > 1) {
-        if (nn == 0)
+    for (q = BIT41; q > 1; q >>= 1) {
+        if (n.mantissa == 0)
             break;
 
-        if (ABS(nn) < BIT40)
-            nn *= 2;        // magic shortcut
-        else if ((nn > 0) ^ (dd > 0)) {
+        if (llabs(n.mantissa) < BIT40) {
+            // magic shortcut
+            n.mantissa *= 2;
+        } else if ((n.mantissa > 0) ^ (d.mantissa > 0)) {
             res -= q;
-            nn = 2*nn+dd;
+            n.mantissa = (2 * n.mantissa) + d.mantissa;
         } else {
             res += q;
-            nn = 2*nn-dd;
+            n.mantissa = (2 * n.mantissa) - d.mantissa;
         }
-        q /= 2;
     }
     quot.mantissa = res/2;
-    quot.exponent = n.exponent-d.exponent+64;
+    quot.exponent = n.exponent - d.exponent + 64;
     return quot;
 }
 
@@ -338,7 +342,7 @@ void svs_multiply(struct ElSvsProcessor *cpu, uint64_t val)
     mul_i41_by_i41(acc.mantissa, word.mantissa, &acc.mantissa, &mr);
     acc.exponent += word.exponent - 64;
 
-    if (((acc.mantissa >> 1) ^ acc.mantissa) & BIT41) {
+    if (is_denormal(&acc)) {
         acc.mantissa >>= 1;
         ++acc.exponent;
     }
@@ -357,7 +361,7 @@ void svs_change_sign(struct ElSvsProcessor *cpu, int negate_acc)
     acc = toalu(cpu->core.ACC);
     if (negate_acc) {
         negate(&acc);
-        if (((acc.mantissa >> 1) ^ acc.mantissa) & BIT41) {
+        if (is_denormal(&acc)) {
             acc.mantissa >>= 1;
             ++acc.exponent;
         }
