@@ -1544,7 +1544,7 @@ static void multiply(void *context)
     ct_assertequal(ElSvsGetAcc(cpu), 0u);
     ct_assertequal(ElSvsGetRMR(cpu), 0u);
     ct_assertequal(ElSvsGetRAU(cpu), 06u);
-    ct_assertequal(ElSvsGetM(cpu, 15), 02014u);
+    ct_assertequal(ElSvsGetM(cpu, 15), 02001u);
 }
 
 //

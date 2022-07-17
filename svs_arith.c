@@ -26,7 +26,7 @@
 #include <math.h>
 
 typedef struct {
-    uint64_t mantissa;
+    int64_t mantissa;                   // Note: signed value
     unsigned exponent;                  // offset by 64
 } alureg_t;                             // ALU register type
 
@@ -34,10 +34,12 @@ static alureg_t toalu(uint64_t val)
 {
     alureg_t ret;
 
-    ret.mantissa = val & BITS41;
     ret.exponent = (val >> 41) & BITS(7);
-    if (ret.mantissa & BIT41)
-        ret.mantissa |= BIT42;
+    ret.mantissa = val & BITS41;
+
+    // Sign extend.
+    ret.mantissa <<= 64 - 41;
+    ret.mantissa >>= 64 - 41;
     return ret;
 }
 
@@ -48,9 +50,7 @@ static inline int is_negative(alureg_t *word)
 
 static void negate(alureg_t *val)
 {
-    if (is_negative(val))
-        val->mantissa |= BIT42;
-    val->mantissa = (~val->mantissa + 1) & BITS42;
+    val->mantissa = - val->mantissa;
 }
 
 //
@@ -307,59 +307,40 @@ void svs_divide(struct ElSvsProcessor *cpu, uint64_t val)
 }
 
 //
+// Multiply two signed 41-bit integers a and b, giving a 81-bit result.
+// Put upper 41 bits into signed *hi.
+// Put lower 40 bits into unsigned *lo.
+//
+void mul_i41_by_i41(int64_t a, int64_t b, int64_t *hi, uint64_t *lo)
+{
+    __int128 result = (__int128) a * b;
+    *hi = (int64_t) (result >> 40);
+    *lo = (uint64_t)result & BITS40;
+}
+
+//
 // Умножение.
 // Исходные значения: регистр ACC и аргумент 'val'.
 // Результат помещается в регистр ACC и 40-1 разряды RMR.
 //
 void svs_multiply(struct ElSvsProcessor *cpu, uint64_t val)
 {
-    uint8_t neg = 0;
-    alureg_t acc, word, a, b;
-    uint64_t mr, alo, blo, ahi, bhi;
-
-    register uint64_t l;
-
     if (! cpu->core.ACC || ! val) {
         // multiplication by zero is zero
         cpu->core.ACC = 0;
         cpu->core.RMR &= ~BITS40;
         return;
     }
-    acc = toalu(cpu->core.ACC);
-    word = toalu(val);
+    alureg_t acc = toalu(cpu->core.ACC);
+    alureg_t word = toalu(val);
+    uint64_t mr;
 
-    a = acc;
-    b = word;
-    mr = 0;
+    mul_i41_by_i41(acc.mantissa, word.mantissa, &acc.mantissa, &mr);
+    acc.exponent += word.exponent - 64;
 
-    if (is_negative(&a)) {
-        neg = 1;
-        negate(&a);
-    }
-    if (is_negative(&b)) {
-        neg ^= 1;
-        negate(&b);
-    }
-    acc.exponent = a.exponent + b.exponent - 64;
-
-    alo = a.mantissa & BITS(20);
-    ahi = a.mantissa >> 20;
-
-    blo = b.mantissa & BITS(20);
-    bhi = b.mantissa >> 20;
-
-    l = alo * blo + ((alo * bhi + ahi * blo) << 20);
-
-    mr = l & BITS40;
-    l >>= 40;
-
-    acc.mantissa = l + ahi * bhi;
-
-    if (neg && (acc.mantissa || mr)) {
-        mr = (~mr & BITS40) + 1;
-        acc.mantissa = ((~acc.mantissa & BITS40) + (mr >> 40))
-            | BIT41 | BIT42;
-        mr &= BITS40;
+    if (((acc.mantissa >> 1) ^ acc.mantissa) & BIT41) {
+        acc.mantissa >>= 1;
+        ++acc.exponent;
     }
 
     normalize_and_round(cpu, acc, mr, mr != 0);
@@ -380,8 +361,6 @@ void svs_change_sign(struct ElSvsProcessor *cpu, int negate_acc)
             acc.mantissa >>= 1;
             ++acc.exponent;
         }
-        if (is_negative(&acc))
-            acc.mantissa |= BIT42;
     }
     cpu->core.RMR = 0;
     normalize_and_round(cpu, acc, 0, 0);
