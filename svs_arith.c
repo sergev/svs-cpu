@@ -49,6 +49,10 @@ static inline int is_negative(alureg_t *word)
     return (word->mantissa & BIT41) != 0;
 }
 
+//
+// Change sign of the mantissa.
+// Note: the number may become denormalized.
+//
 static void negate(alureg_t *val)
 {
     val->mantissa = - val->mantissa;
@@ -61,6 +65,16 @@ static void negate(alureg_t *val)
 static inline int is_denormal(alureg_t *val)
 {
     return ((val->mantissa >> 40) ^ (val->mantissa >> 41)) & 1;
+}
+
+//
+// Normalize "to the right".
+// Increment the exponent and update the mantissa.
+//
+static void normalize_to_the_right(alureg_t *val)
+{
+    val->mantissa >>= 1;
+    ++val->exponent;
 }
 
 //
@@ -245,8 +259,7 @@ void svs_add(struct ElSvsProcessor *cpu, uint64_t val, int negate_acc, int negat
     if (is_denormal(&acc)) {
         rnd_rq |= acc.mantissa & 1;
         mr = (mr >> 1) | ((acc.mantissa & 1) << 39);
-        acc.mantissa >>= 1;
-        ++acc.exponent;
+        normalize_to_the_right(&acc);
     }
     normalize_and_round(cpu, acc, mr, rnd_rq);
 }
@@ -264,9 +277,7 @@ static alureg_t nrdiv(alureg_t n, alureg_t d)
     d.mantissa <<= 1;
 
     if (llabs(n.mantissa) >= llabs(d.mantissa)) {
-        // normalization to the right
-        n.mantissa >>= 1;
-        ++n.exponent;
+        normalize_to_the_right(&n);
     }
     for (q = BIT41; q > 1; q >>= 1) {
         if (n.mantissa == 0)
@@ -343,8 +354,7 @@ void svs_multiply(struct ElSvsProcessor *cpu, uint64_t val)
     acc.exponent += word.exponent - 64;
 
     if (is_denormal(&acc)) {
-        acc.mantissa >>= 1;
-        ++acc.exponent;
+        normalize_to_the_right(&acc);
     }
 
     normalize_and_round(cpu, acc, mr, mr != 0);
@@ -362,8 +372,7 @@ void svs_change_sign(struct ElSvsProcessor *cpu, int negate_acc)
     if (negate_acc) {
         negate(&acc);
         if (is_denormal(&acc)) {
-            acc.mantissa >>= 1;
-            ++acc.exponent;
+            normalize_to_the_right(&acc);
         }
     }
     cpu->core.RMR = 0;
