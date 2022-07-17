@@ -128,6 +128,16 @@ void ElSvsSetM(struct ElSvsProcessor *cpu, unsigned index, unsigned val)
     cpu->core.M[index] = val;
 }
 
+void ElSvsSetRAU(struct ElSvsProcessor *cpu, unsigned val)
+{
+    cpu->core.RAU = val;
+}
+
+void ElSvsSetAcc(struct ElSvsProcessor *cpu, uint64_t val)
+{
+    cpu->core.ACC = val;
+}
+
 //
 // Get register value.
 //

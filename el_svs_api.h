@@ -85,6 +85,8 @@ void ElSvsSetTrace(struct ElSvsProcessor *cpu, const char *trace_mode, const cha
 void ElSvsSetPC(struct ElSvsProcessor *cpu, unsigned val);
 void ElSvsSetM(struct ElSvsProcessor *cpu, unsigned index, unsigned val);
 void ElSvsSetPult(struct ElSvsProcessor *cpu, unsigned index, uint64_t val);
+void ElSvsSetAcc(struct ElSvsProcessor *cpu, uint64_t val);
+void ElSvsSetRAU(struct ElSvsProcessor *cpu, unsigned val);
 
 /*
  * Get register value.

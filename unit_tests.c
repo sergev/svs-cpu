@@ -9,6 +9,7 @@
 #include "cinytest/ciny.h"
 #include "el_master_api.h"
 #include "el_svs_api.h"
+#include "el_svs_internal.h"
 
 static const char log_filename[] = "test.output";
 
@@ -1489,6 +1490,68 @@ static void avx(void *context)
 }
 
 //
+// Test: multiplication in ALU.
+//
+static void alu_mul(void *context)
+{
+    struct ElSvsProcessor *cpu = context;
+
+    // Disable normalization
+    ElSvsSetRAU(cpu, 3);
+
+    ElSvsSetAcc(cpu, 04050000000000000);                    // 1/2 * 2^1
+    svs_multiply(cpu, 04050000000000000);                   // 1/2 * 2^1
+    ct_assertequal(ElSvsGetAcc(cpu), 04104000000000000u);   // 1/4 * 2^2
+    ct_assertequal(ElSvsGetRMR(cpu), 0u);
+
+    ElSvsSetAcc(cpu, 04050000000000000);                    // 1/2 * 2^1
+    svs_multiply(cpu, 04020000000000000);                   // -1 * 2^0
+    ct_assertequal(ElSvsGetAcc(cpu), 04070000000000000u);   // -1/2 * 2^1
+    ct_assertequal(ElSvsGetRMR(cpu), 0u);
+
+    ElSvsSetAcc(cpu, 04020000000000000);                    // -1 * 2^0
+    svs_multiply(cpu, 04050000000000000);                   // 1/2 * 2^1
+    ct_assertequal(ElSvsGetAcc(cpu), 04070000000000000u);   // -1/2 * 2^1
+    ct_assertequal(ElSvsGetRMR(cpu), 0u);
+
+    ElSvsSetAcc(cpu, 04020000000000000);                    // -1 * 2^0
+    svs_multiply(cpu, 04020000000000000);                   // -1 * 2^0
+    ct_assertequal(ElSvsGetAcc(cpu), 04050000000000000u);   // 1/2 * 2^1
+    ct_assertequal(ElSvsGetRMR(cpu), 0u);
+}
+
+//
+// Test: division in ALU.
+//
+static void alu_div(void *context)
+{
+    struct ElSvsProcessor *cpu = context;
+
+    // Disable normalization
+    ElSvsSetRAU(cpu, 3);
+
+    ElSvsSetAcc(cpu, 04050000000000000);                    // 1/2 * 2^1
+    svs_divide(cpu, 04050000000000000);                     // 1/2 * 2^1
+    ct_assertequal(ElSvsGetAcc(cpu), 04050000000000000u);   // 1/2 * 2^1
+    ct_assertequal(ElSvsGetRMR(cpu), 0u);
+
+    ElSvsSetAcc(cpu, 04050000000000000);                    // 1/2 * 2^1
+    svs_divide(cpu, 04020000000000000);                     // -1 * 2^0
+    ct_assertequal(ElSvsGetAcc(cpu), 04070000000000000u);   // -1/2 * 2^1
+    ct_assertequal(ElSvsGetRMR(cpu), 0u);
+
+    ElSvsSetAcc(cpu, 04020000000000000);                    // -1 * 2^0
+    svs_divide(cpu, 04050000000000000);                     // 1/2 * 2^1
+    ct_assertequal(ElSvsGetAcc(cpu), 04020000000000001u);   // -1 * 2^0 --- BUG?
+    ct_assertequal(ElSvsGetRMR(cpu), 0u);
+
+    ElSvsSetAcc(cpu, 04020000000000000);                    // -1 * 2^0
+    svs_divide(cpu, 04020000000000000);                     // -1 * 2^0
+    ct_assertequal(ElSvsGetAcc(cpu), 04050000000000000u);   // 1/2 * 2^1
+    ct_assertequal(ElSvsGetRMR(cpu), 0u);
+}
+
+//
 // Test: A*X instruction (УМН).
 //
 static void multiply(void *context)
@@ -1611,6 +1674,8 @@ int main(int argc, char *argv[])
         ct_maketest(aax_asx_xsa),
         ct_maketest(amx),
         ct_maketest(avx),
+        ct_maketest(alu_mul),
+        ct_maketest(alu_div),
         ct_maketest(multiply),
         ct_maketest(divide),
     };
