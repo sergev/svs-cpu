@@ -55,14 +55,14 @@ static const char
 
 #define ASSERT_FAIL_LINEFMT " L.%d : "
 static const char
-    *const restrict HelpOption = "--ct-help",
-    *const restrict VersionOption = "--ct-version",
-    *const restrict VerboseOption = "--ct-verbose",
-    *const restrict ColorizedOption = "--ct-colorized",
-    *const restrict SuppressOutputOption = "--ct-suppress-output",
-    *const restrict IncludeFilterOption = "--ct-include",
-    *const restrict ExcludeFilterOption = "--ct-exclude",
-    *const restrict XmlFileOption = "--ct-xml",
+    *const restrict HelpOption = "--help",
+    *const restrict VersionOption = "--version",
+    *const restrict VerboseOption = "--verbose",
+    *const restrict ColorizedOption = "--colorized",
+    *const restrict SuppressOutputOption = "--suppress-output",
+    *const restrict IncludeFilterOption = "--include",
+    *const restrict ExcludeFilterOption = "--exclude",
+    *const restrict XmlFileOption = "--xml",
     *const restrict IgnoredTestSymbol = "?";
 
 enum text_highlight {
