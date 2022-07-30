@@ -269,8 +269,14 @@ void svs_add(struct ElSvsProcessor *cpu, uint64_t val, int negate_acc, int negat
 //
 static alureg_t nrdiv(alureg_t n, alureg_t d)
 {
-    int64_t q, res = 0;
     alureg_t quot;
+
+    if (d.mantissa == BIT40) {
+        // Divide by a positive power of 2.
+        quot.mantissa = n.mantissa;
+        quot.exponent = n.exponent - d.exponent + 64 + 1;
+        return quot;
+    }
 
     // to compensate for potential normalization to the right
     n.mantissa <<= 1;
@@ -279,23 +285,32 @@ static alureg_t nrdiv(alureg_t n, alureg_t d)
     if (llabs(n.mantissa) >= llabs(d.mantissa)) {
         normalize_to_the_right(&n);
     }
-    for (q = BIT41; q > 1; q >>= 1) {
+
+    // Compute exponent.
+    quot.exponent = n.exponent - d.exponent + 64;
+
+    // Compute mantissa.
+    quot.mantissa = 0;
+    for (int64_t bitmask = BIT40; bitmask > 0; bitmask >>= 1) {
         if (n.mantissa == 0)
             break;
 
         if (llabs(n.mantissa) < BIT40) {
             // magic shortcut
             n.mantissa *= 2;
-        } else if ((n.mantissa > 0) ^ (d.mantissa > 0)) {
-            res -= q;
-            n.mantissa = (2 * n.mantissa) + d.mantissa;
+
+        } else if ((n.mantissa > 0) == (d.mantissa > 0)) {
+            // Same sign
+            quot.mantissa += bitmask;
+            n.mantissa *= 2;
+            n.mantissa -= d.mantissa;
         } else {
-            res += q;
-            n.mantissa = (2 * n.mantissa) - d.mantissa;
+            // Different sign
+            quot.mantissa -= bitmask;
+            n.mantissa *= 2;
+            n.mantissa += d.mantissa;
         }
     }
-    quot.mantissa = res/2;
-    quot.exponent = n.exponent - d.exponent + 64;
     return quot;
 }
 

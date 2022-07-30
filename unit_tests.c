@@ -1561,9 +1561,6 @@ static void alu_div(void *context)
     ElSvsSetAcc(cpu, 04020000000000000);                    // -1 * 2^0
     svs_divide(cpu, 04050000000000000);                     // 1/2 * 2^1
     ct_assertequal(ElSvsGetAcc(cpu), 04020000000000000u);   // -1 * 2^0
-    // Error: ElSvsGetAcc(cpu) is not equal to 04020000000000000u:
-    // actual   04020000000000001,
-    // expected 04020000000000000
     ct_assertequal(ElSvsGetRMR(cpu), 0u);
 }
 
