@@ -53,7 +53,7 @@ static const char
 // Type and Data Definitions
 //
 
-#define ASSERT_FAIL_LINEFMT " L.%d : "
+#define ASSERT_FAIL_LINEFMT " line %d: "
 static const char
     *const restrict HelpOption = "--help",
     *const restrict VersionOption = "--version",
@@ -1051,8 +1051,7 @@ comparable_value_valuedescription(const struct ct_comparable_value *value,
         write_count = snprintf(buffer, size, "%"PRIdMAX, value->integer_value);
         break;
     case CT_ANNOTATE_UINTEGER:
-        write_count = snprintf(buffer, size, "%"PRIuMAX,
-                               value->uinteger_value);
+        write_count = snprintf(buffer, size, "%#jo", value->uinteger_value);
         break;
     case CT_ANNOTATE_FLOATINGPOINT:
         write_count = snprintf(buffer, size, "%.*Lg", DECIMAL_DIG,
@@ -1657,10 +1656,11 @@ void ct_internal_assertequal(struct ct_comparable_value expected,
                                           valuestr_expected);
         comparable_value_valuedescription(&actual, sizeof valuestr_actual,
                                           valuestr_actual);
-        assertstate_setdescription("(%s) is not equal to (%s): expected (%s),"
-                                   " actual (%s)", stringized_expected,
-                                   stringized_actual, valuestr_expected,
-                                   valuestr_actual);
+        assertstate_setdescription("%s is not equal to %s:\n"
+                                   "   actual   %s,\n"
+                                   "   expected %s",
+                                   stringized_actual, stringized_expected,
+                                   valuestr_actual, valuestr_expected);
         failed_assert = true;
     }
 

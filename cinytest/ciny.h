@@ -283,7 +283,7 @@ ct_internal_assertnotnull(expression, #expression, __FILE__, __LINE__, \
  @param message A printf-style format string literal with optional arguments
  to display when the assertion fails.
  */
-#define ct_assertequal(expected, actual, ...) \
+#define ct_assertequal(actual, expected, ...) \
 do { \
     ct_checkvalue(expected); \
     ct_checkvalue(actual); \
@@ -303,7 +303,7 @@ do { \
  @param message A printf-style format string literal with optional arguments
  to display when the assertion fails.
  */
-#define ct_assertnotequal(expected, actual, ...) \
+#define ct_assertnotequal(actual, expected, ...) \
 do { \
     ct_checkvalue(expected); \
     ct_checkvalue(actual); \
@@ -323,7 +323,7 @@ do { \
  @param message A printf-style format string literal with optional arguments
  to display when the assertion fails.
  */
-#define ct_assertaboutequal(expected, actual, precision, ...) \
+#define ct_assertaboutequal(actual, expected, precision, ...) \
 ct_internal_assertaboutequal(expected, #expected, actual, #actual, \
                              precision, __FILE__, __LINE__, \
                              ct_va_string(__VA_ARGS__), \
@@ -338,7 +338,7 @@ ct_internal_assertaboutequal(expected, #expected, actual, #actual, \
  @param message A printf-style format string literal with optional arguments
  to display when the assertion fails.
  */
-#define ct_assertnotaboutequal(expected, actual, precision, ...) \
+#define ct_assertnotaboutequal(actual, expected, precision, ...) \
 ct_internal_assertnotaboutequal(expected, #expected, actual, #actual, \
                                 precision, __FILE__, __LINE__, \
                                 ct_va_string(__VA_ARGS__), \
@@ -351,7 +351,7 @@ ct_internal_assertnotaboutequal(expected, #expected, actual, #actual, \
  @param message A printf-style format string literal with optional arguments
  to display when the assertion fails.
  */
-#define ct_assertsame(expected, actual, ...) \
+#define ct_assertsame(actual, expected, ...) \
 ct_internal_assertsame(expected, #expected, actual, #actual, __FILE__, \
                        __LINE__, ct_va_string(__VA_ARGS__), \
                        ct_va_rest(__VA_ARGS__))
@@ -362,7 +362,7 @@ ct_internal_assertsame(expected, #expected, actual, #actual, __FILE__, \
  @param message A printf-style format string literal with optional arguments
  to display when the assertion fails.
  */
-#define ct_assertnotsame(expected, actual, ...) \
+#define ct_assertnotsame(actual, expected, ...) \
 ct_internal_assertnotsame(expected, #expected, actual, #actual, __FILE__, \
                           __LINE__, ct_va_string(__VA_ARGS__), \
                           ct_va_rest(__VA_ARGS__))
@@ -377,7 +377,7 @@ ct_internal_assertnotsame(expected, #expected, actual, #actual, __FILE__, \
  @param message A printf-style format string literal with optional arguments
  to display when the assertion fails.
  */
-#define ct_assertequalstr(expected, actual, ...) \
+#define ct_assertequalstr(actual, expected, ...) \
 ct_internal_assertequalstrn("" expected "", #expected, actual, #actual, \
                             sizeof (expected), __FILE__, __LINE__, \
                             ct_va_string(__VA_ARGS__), \
@@ -392,7 +392,7 @@ ct_internal_assertequalstrn("" expected "", #expected, actual, #actual, \
  @param message A printf-style format string literal with optional arguments
  to display when the assertion fails.
  */
-#define ct_assertequalstrn(expected, actual, n, ...) \
+#define ct_assertequalstrn(actual, expected, n, ...) \
 ct_internal_assertequalstrn(expected, #expected, actual, #actual, n, \
                             __FILE__, __LINE__, ct_va_string(__VA_ARGS__), \
                             ct_va_rest(__VA_ARGS__))
@@ -406,7 +406,7 @@ ct_internal_assertequalstrn(expected, #expected, actual, #actual, n, \
  @param message A printf-style format string literal with optional arguments
  to display when the assertion fails.
  */
-#define ct_assertnotequalstr(expected, actual, ...) \
+#define ct_assertnotequalstr(actual, expected, ...) \
 ct_internal_assertnotequalstrn("" expected "", #expected, actual, #actual, \
                                sizeof (expected), __FILE__, __LINE__, \
                                ct_va_string(__VA_ARGS__), \
@@ -421,7 +421,7 @@ ct_internal_assertnotequalstrn("" expected "", #expected, actual, #actual, \
  @param message A printf-style format string literal with optional arguments
  to display when the assertion fails.
  */
-#define ct_assertnotequalstrn(expected, actual, n, ...) \
+#define ct_assertnotequalstrn(actual, expected, n, ...) \
 ct_internal_assertnotequalstrn(expected, #expected, actual, #actual, n, \
                                __FILE__, __LINE__, ct_va_string(__VA_ARGS__), \
                                ct_va_rest(__VA_ARGS__))
