@@ -1539,24 +1539,31 @@ static void alu_div(void *context)
     // Disable normalization
     ElSvsSetRAU(cpu, 3);
 
+    // 1.0 / 1.0 gives 1.0
     ElSvsSetAcc(cpu, 04050000000000000);                    // 1/2 * 2^1
     svs_divide(cpu, 04050000000000000);                     // 1/2 * 2^1
     ct_assertequal(ElSvsGetAcc(cpu), 04050000000000000u);   // 1/2 * 2^1
     ct_assertequal(ElSvsGetRMR(cpu), 0u);
 
+    // -1.0 / -1.0 gives 1.0
+    ElSvsSetAcc(cpu, 04020000000000000);                    // -1 * 2^0
+    svs_divide(cpu, 04020000000000000);                     // -1 * 2^0
+    ct_assertequal(ElSvsGetAcc(cpu), 04050000000000000u);   // 1/2 * 2^1
+    ct_assertequal(ElSvsGetRMR(cpu), 0u);
+
+    // 1.0 / -1.0 gives -1.0 denormalized
     ElSvsSetAcc(cpu, 04050000000000000);                    // 1/2 * 2^1
     svs_divide(cpu, 04020000000000000);                     // -1 * 2^0
     ct_assertequal(ElSvsGetAcc(cpu), 04070000000000000u);   // -1/2 * 2^1
     ct_assertequal(ElSvsGetRMR(cpu), 0u);
 
+    // -1.0 / 1.0 gives -1.0
     ElSvsSetAcc(cpu, 04020000000000000);                    // -1 * 2^0
     svs_divide(cpu, 04050000000000000);                     // 1/2 * 2^1
-    ct_assertequal(ElSvsGetAcc(cpu), 04020000000000001u);   // -1 * 2^0 --- BUG?
-    ct_assertequal(ElSvsGetRMR(cpu), 0u);
-
-    ElSvsSetAcc(cpu, 04020000000000000);                    // -1 * 2^0
-    svs_divide(cpu, 04020000000000000);                     // -1 * 2^0
-    ct_assertequal(ElSvsGetAcc(cpu), 04050000000000000u);   // 1/2 * 2^1
+    ct_assertequal(ElSvsGetAcc(cpu), 04020000000000000u);   // -1 * 2^0
+    // Error: ElSvsGetAcc(cpu) is not equal to 04020000000000000u:
+    // actual   04020000000000001,
+    // expected 04020000000000000
     ct_assertequal(ElSvsGetRMR(cpu), 0u);
 }
 
